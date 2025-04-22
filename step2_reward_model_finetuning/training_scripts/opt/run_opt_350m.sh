@@ -9,8 +9,8 @@ export OPENBLAS_NUM_THREADS=4
 export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
 
-DEV=0,1
-PORT=1235
+DEV=1,2
+PORT=1236
 OUTPUT=$1
 ZERO_STAGE=2
 DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/rlhf/dataset/Dahoas/full-hh-rlhf"
