@@ -721,7 +721,7 @@ def main():
             for key, value in args.__dict__.items():
                 json.dump({key: value}, f, ensure_ascii=False)
                 f.write("\n")
-        save_code(args.output_dir)
+        #(args.output_dir)
 
         print(f"Tensorboard logs going to: {args.tensorboard_path}")
         writer = SummaryWriter(f"{args.tensorboard_path}")
