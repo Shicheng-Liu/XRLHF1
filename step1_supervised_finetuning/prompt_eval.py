@@ -11,7 +11,6 @@ import math
 
 from transformers import AutoModelForCausalLM, AutoConfig
 
-from transformers.deepspeed import HfDeepSpeedConfig
 
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
