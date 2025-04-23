@@ -137,7 +137,7 @@ def prepare_singlesample(prompt,
 
 def PKU_reward(prompt,response,reward_model,reward_tokenizer,device):
     input = prompt + response
-    input_ids = reward_tokenizer(input,return_tensors='pt',truncation=True,max_length=512)
+    input_ids = reward_tokenizer(input,return_tensors='pt',truncation=True,max_length=2048)
     input_ids = to_device(input_ids,device)
     output = reward_model(**input_ids)
     return output.end_scores.item()
