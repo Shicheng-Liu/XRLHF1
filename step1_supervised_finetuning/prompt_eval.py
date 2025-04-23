@@ -208,15 +208,18 @@ def prompt_eval(args, model_baseline, model_fintuned, tokenizer, device, prompts
 def main():
     args = parse_args()
 
-    device = torch.device("cuda:0")
+    device = torch.device("cuda:1")
     tokenizer = load_hf_tokenizer(args.model_name_or_path_baseline, fast_tokenizer=True)
+    print("tokenizer")
 
     model_baseline = create_hf_model(
         AutoModelForCausalLM, args.model_name_or_path_baseline, tokenizer, None
     )
+    print("model_baseline")
     model_fintuned = create_hf_model(
         AutoModelForCausalLM, args.model_name_or_path_finetune, tokenizer, None
     )
+    print("model_fintuned")
 
     model_baseline.to(device)
     model_fintuned.to(device)
