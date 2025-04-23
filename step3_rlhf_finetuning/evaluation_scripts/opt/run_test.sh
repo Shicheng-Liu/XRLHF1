@@ -3,7 +3,7 @@
 # trained by opt-1.3b reward model
 
 
-CUDA_VISIBLE_DEVICES=1 python test.py \
+CUDA_VISIBLE_DEVICES=0 python test.py \
     --model_name opt-1.3b\
     --model_name_or_path_baseline facebook/opt-1.3b \
     --model_name_or_path_finetune ~/workspace/siyuan/ReMax/step1_supervised_finetuning/output/opt-1.3b/full-hh-rlhf \
