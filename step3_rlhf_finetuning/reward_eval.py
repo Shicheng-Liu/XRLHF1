@@ -209,7 +209,7 @@ def main():
         reward_base_list.append(base_reward)
         reward_finetune_list.append(finetune_reward)
         reward_rlhf_list.append(rlhf_reward)
-        if rlhf_reward > finetune_reward:
+        if rlhf_reward >= finetune_reward:
             win_rate_list.append(1)
         else:
             win_rate_list.append(0)
