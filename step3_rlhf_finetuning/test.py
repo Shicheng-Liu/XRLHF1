@@ -277,20 +277,22 @@ def main():
     device = torch.device(get_accelerator().device_name(0))
 
     args.end_of_conversation_token = "<|endoftext|>"
-    additional_special_tokens = args.end_of_conversation_token if args.add_eot_token else None
+    #additional_special_tokens = args.end_of_conversation_token if args.add_eot_token else None
     tokenizer = load_hf_tokenizer(args.model_name_or_path_baseline,
                                   fast_tokenizer=True)  #,add_special_tokens=additional_special_tokens
-
+    print("tokenizer")
     model_baseline = create_hf_model(AutoModelForCausalLM,
                                      args.model_name_or_path_baseline,
                                      tokenizer, None)
+    print("model_baseline")
     model_fintuned = create_hf_model(AutoModelForCausalLM,
                                      args.model_name_or_path_finetune,
                                      tokenizer, None)
-
+    print("model_fintuned")
     model_rlhf = create_hf_model(AutoModelForCausalLM,
                                      args.model_name_or_path_rlhf,
                                      tokenizer, None)
+    print("model_rlhf")
     
     model_baseline.to(device)
     model_fintuned.to(device)
@@ -303,7 +305,7 @@ def main():
     # to make it a more meaningful comparison.
     ds = load_dataset("json", data_files=args.data_path)["train"]
     prompts = ds["prompt"][:10]
-
+    print("enter prompt")
     prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, device, prompts)
 
 
