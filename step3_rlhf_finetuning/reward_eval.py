@@ -16,6 +16,7 @@ sys.path.append(
 from tqdm import tqdm
 from utils.model.model_utils import create_hf_model, create_critic_model
 from utils.utils import to_device, load_hf_tokenizer
+import accelerate
 from deepspeed import get_accelerator
 from datasets import load_dataset
 
@@ -131,7 +132,7 @@ def prepare_singlesample(prompt,
 
 def PKU_reward(prompt,response,reward_model,reward_tokenizer,device):
     input = prompt + response
-    input_ids = reward_tokenizer(input,return_tensors='pt')
+    input_ids = reward_tokenizer(input,return_tensors='pt',truncation=True,max_length=512)
     input_ids = to_device(input_ids,device)
     output = reward_model(**input_ids)
     return output.end_scores.item()
