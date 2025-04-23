@@ -81,8 +81,8 @@ def create_critic_model(
         disable_dropout,
     )
     end = time.time()
-    if eval_mode or torch.distributed.get_rank() == 0:
-        print(f"> Creating model from_config took {end - start} seconds")
+    #if eval_mode or torch.distributed.get_rank() == 0:
+    print(f"> Creating model from_config took {end - start} seconds")
 
     critic_model = RewardModel(
         critic_model, tokenizer, num_padding_at_beginning=num_padding_at_beginning
