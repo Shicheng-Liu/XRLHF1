@@ -10,7 +10,7 @@ from transformers import (
     AutoModel,
 )
 from huggingface_hub import snapshot_download
-from transformers.deepspeed import HfDeepSpeedConfig
+from transformers.integrations.deepspeed import HfDeepSpeedConfig
 
 from .reward_model import RewardModel
 from ..utils import load_state_dict_into_model
