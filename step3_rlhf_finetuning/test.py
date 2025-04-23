@@ -300,7 +300,7 @@ def main():
     # Finetuned models have less such issue. Thus following prompts all end with ":"
     # to make it a more meaningful comparison.
     ds = load_dataset("json", data_files=args.data_path)["train"]
-    prompts = ds["prompt"][:10]
+    prompts = ds["prompt"][:500]
     print("enter prompt")
     prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, device, prompts)
 
