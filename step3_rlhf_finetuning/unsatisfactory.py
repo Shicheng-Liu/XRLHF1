@@ -226,7 +226,7 @@ def main():
             satisfactory_sft.append(sft_response)
             satisfactory_responses.append(rlhf_response)
         else:
-            print(f"SFT Reward: {finetune_reward:.4f}, RLHF Reward: {rlhf_reward:.4f}")
+            #print(f"SFT Reward: {finetune_reward:.4f}, RLHF Reward: {rlhf_reward:.4f}")
             win_rate_list.append(0)
             unsatisfactory_prompts.append(prompt)
             unsatisfactory_sft.append(sft_response)

@@ -216,9 +216,13 @@ def main():
         elif rlhf_reward == finetune_reward and sign == 1:
             win_rate_list.append(1)
             sign = 0
+            print("SFT response", sft_response)
+            print("rlhf_response",rlhf_response)
         else:
             win_rate_list.append(0)
             sign = 1
+            print("SFT response", sft_response)
+            print("rlhf_response",rlhf_response)
         
 
     print("reward for base model",np.mean(reward_base_list))
