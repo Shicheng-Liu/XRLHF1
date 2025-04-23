@@ -209,14 +209,16 @@ def main():
         reward_base_list.append(base_reward)
         reward_finetune_list.append(finetune_reward)
         reward_rlhf_list.append(rlhf_reward)
-        if rlhf_reward >= finetune_reward and sign == 1:
+        if rlhf_reward > finetune_reward:
+            win_rate_list.append(1)
+        elif rlhf_reward < finetune_reward:
+            win_rate_list.append(0)
+        elif rlhf_reward == finetune_reward and sign == 1:
             win_rate_list.append(1)
             sign = 0
-        elif rlhf_reward >= finetune_reward and sign == 0:
-            win_rate_list.append(0)
-            sign = 1
         else:
             win_rate_list.append(0)
+            sign = 1
         
 
     print("reward for base model",np.mean(reward_base_list))
