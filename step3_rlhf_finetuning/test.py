@@ -274,7 +274,8 @@ def prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, dev
 def main():
     args = parse_args()
 
-    device = torch.device(get_accelerator().device_name(0))
+    device = torch.device("cuda:1")
+    #device = torch.device(get_accelerator().device_name(0))
 
     args.end_of_conversation_token = "<|endoftext|>"
     #additional_special_tokens = args.end_of_conversation_token if args.add_eot_token else None
