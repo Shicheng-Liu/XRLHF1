@@ -131,7 +131,7 @@ def prepare_singlesample(prompt,
 
 def PKU_reward(prompt,response,reward_model,reward_tokenizer,device):
     input = prompt + response
-    input_ids = reward_tokenizer(input,return_tensors='pt',truncation=True,max_length=512)
+    input_ids = reward_tokenizer(input,return_tensors='pt',truncation=True,max_length=2048)
     input_ids = to_device(input_ids,device)
     output = reward_model(**input_ids)
     return output.end_scores.item()
@@ -211,18 +211,17 @@ def main():
         reward_rlhf_list.append(rlhf_reward)
         if rlhf_reward > finetune_reward:
             win_rate_list.append(1)
-        elif rlhf_reward < finetune_reward:
-            win_rate_list.append(0)
-        elif rlhf_reward == finetune_reward and sign == 1:
-            win_rate_list.append(1)
-            sign = 0
-            print("SFT response", sft_response)
-            print("rlhf_response",rlhf_response)
         else:
             win_rate_list.append(0)
-            sign = 1
-            print("SFT response", sft_response)
-            print("rlhf_response",rlhf_response)
+        # elif rlhf_reward < finetune_reward:
+        #     win_rate_list.append(0)
+        # elif rlhf_reward == finetune_reward and sign == 1:
+        #     win_rate_list.append(1)
+        #     sign = 0
+        # else:
+        #     win_rate_list.append(0)
+        #     sign = 1
+
         
 
     print("reward for base model",np.mean(reward_base_list))
