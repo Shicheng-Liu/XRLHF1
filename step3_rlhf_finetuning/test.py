@@ -175,7 +175,7 @@ def prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, dev
     rlhf_response = []
     for prompt in tqdm(prompts, desc="Generating responses"):
         inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(device)
-        
+        prompt_length = len(prompt)
         # Ensure the pad_token is set, especially if it's the same as eos_token
         # tokenizer.pad_token = tokenizer.eos_token
         # model_baseline.config.pad_token_id = tokenizer.pad_token_id
@@ -192,7 +192,7 @@ def prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, dev
                           num_beams=1,
                           num_return_sequences=args.num_return_sequences,
                           max_new_tokens=args.max_new_tokens)
-        base_response.append(r_base[0])
+        base_response.append(r_base[0][prompt_length:])
         #print_utils(r_base)
 
         #print("==========finetune: Greedy=========")
@@ -203,7 +203,7 @@ def prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, dev
                                 num_return_sequences=args.num_return_sequences,
                                 max_new_tokens=args.max_new_tokens)
         #print_utils(r_finetune_g)
-        finetune_response.append(r_finetune_g[0])
+        finetune_response.append(r_finetune_g[0][prompt_length:])
         
 
         #print("==========rlhf: Greedy=========")
@@ -214,7 +214,7 @@ def prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, dev
                                 num_return_sequences=args.num_return_sequences,
                                 max_new_tokens=args.max_new_tokens)
         #print_utils(r_rlhf_g)
-        rlhf_response.append(r_rlhf_g[0])
+        rlhf_response.append(r_rlhf_g[0][prompt_length:])
         
 
     test_results = []
