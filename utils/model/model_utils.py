@@ -101,8 +101,8 @@ def create_critic_model(
         start = time.time()
         model_ckpt_state_dict = torch.load(model_ckpt_path, map_location="cpu")
         end = time.time()
-        if eval_mode or torch.distributed.get_rank() == 0:
-            print(f"> torch.load took {end - start} seconds")
+        #if eval_mode or torch.distributed.get_rank() == 0:
+        print(f"> torch.load took {end - start} seconds")
 
         # load critic model from checkpoint with zero-stage 3 compatibility
         # this functionality may be moved to DS checkpoint load API in future
@@ -111,7 +111,7 @@ def create_critic_model(
             critic_model, model_ckpt_state_dict, "", zero_stage=zero_stage
         )
         end = time.time()
-        if eval_mode or torch.distributed.get_rank() == 0:
-            print(f"> Loading model state dict took {end - start} seconds")
+        #if eval_mode or torch.distributed.get_rank() == 0:
+        print(f"> Loading model state dict took {end - start} seconds")
 
     return critic_model
