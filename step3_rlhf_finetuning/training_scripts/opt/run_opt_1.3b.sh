@@ -9,11 +9,11 @@ export OPENBLAS_NUM_THREADS=4
 export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
 
-DEV=0,1
+DEV=1,2
 PORT=1236
 DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/rlhf/dataset/Dahoas/full-hh-rlhf"
-ACTOR_MODEL_PATH=~/workspace/siyuan/rlhf/training/step1_supervised_finetuning/output/opt-1.3b/full-hh-rlhf
-REWARD_MODEL_PATH=~/workspace/siyuan/rlhf/training/step2_reward_model_finetuning/output/opt-350m/full-hh-rlhf
+ACTOR_MODEL_PATH=~/workspace/siyuan/ReMax/step1_supervised_finetuning/output/opt-1.3b/full-hh-rlhf
+REWARD_MODEL_PATH=~/workspace/siyuan/ReMax/step2_reward_model_finetuning/output/opt-350m/full-hh-rlhf
 ACTOR_ZERO_STAGE=2
 REWARD_ZERO_STAGE=3
 REFERENCE_ZERO_STAGE=3
