@@ -316,5 +316,5 @@ def evaluate_single_model():
 
 
 if __name__ == "__main__":
-    # main()
-    evaluate_single_model()
+    main()
+    #evaluate_single_model()
