@@ -284,7 +284,7 @@ def main():
             for key, value in args.__dict__.items():
                 json.dump({key: value}, f, ensure_ascii=False)
                 f.write("\n")
-        save_code(args.output_dir)
+        #save_code(args.output_dir)
 
     # load_hf_tokenizer will get the correct tokenizer and set padding tokens based on the model family
     tokenizer = load_hf_tokenizer(args.model_name_or_path, fast_tokenizer=True)
