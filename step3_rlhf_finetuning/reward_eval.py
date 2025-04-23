@@ -8,9 +8,14 @@ import torch
 import json
 import numpy as np
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModelForSequenceClassification
+import sys
+import os
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+)
 from tqdm import tqdm
-from dschat.utils.model.model_utils import create_hf_model, create_critic_model
-from dschat.utils.utils import to_device, load_hf_tokenizer
+from utils.model.model_utils import create_hf_model, create_critic_model
+from utils.utils import to_device, load_hf_tokenizer
 from deepspeed import get_accelerator
 from datasets import load_dataset
 
