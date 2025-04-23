@@ -274,26 +274,21 @@ def prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, dev
 def main():
     args = parse_args()
 
-    device = torch.device("cuda:1")
-    #device = torch.device(get_accelerator().device_name(0))
+    device = torch.device(get_accelerator().device_name(0))
 
     args.end_of_conversation_token = "<|endoftext|>"
     #additional_special_tokens = args.end_of_conversation_token if args.add_eot_token else None
     tokenizer = load_hf_tokenizer(args.model_name_or_path_baseline,
                                   fast_tokenizer=True)  #,add_special_tokens=additional_special_tokens
-    print("tokenizer")
     model_baseline = create_hf_model(AutoModelForCausalLM,
                                      args.model_name_or_path_baseline,
                                      tokenizer, None)
-    print("model_baseline")
     model_fintuned = create_hf_model(AutoModelForCausalLM,
                                      args.model_name_or_path_finetune,
                                      tokenizer, None)
-    print("model_fintuned")
     model_rlhf = create_hf_model(AutoModelForCausalLM,
                                      args.model_name_or_path_rlhf,
                                      tokenizer, None)
-    print("model_rlhf")
     
     model_baseline.to(device)
     model_fintuned.to(device)
