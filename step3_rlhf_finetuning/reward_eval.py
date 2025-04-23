@@ -107,7 +107,7 @@ def load_stuff(model_name_or_path, num_padding_at_beginning,
                                 None,
                                 num_padding_at_beginning,
                                 rlhf_training=True,
-                                dropout=0.)
+                                disable_dropout=True)
 
     return model, tokenizer
 
