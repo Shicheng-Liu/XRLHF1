@@ -24,10 +24,9 @@ def create_hf_model(
     rlhf_training=False,
     disable_dropout=False,
 ):
-    model_config = AutoConfig.from_pretrained(model_name_or_path)
-    # model_config = AutoConfig.from_pretrained(
-    #     model_name_or_path, trust_remote_code=True
-    # )
+    model_config = AutoConfig.from_pretrained(
+        model_name_or_path, trust_remote_code=True
+    )
     if disable_dropout:
         model_config.dropout = 0.0
     # Note: dschf is defined in function scope to avoid global effects
@@ -43,14 +42,10 @@ def create_hf_model(
         model = model_class.from_pretrained(
             model_name_or_path,
             from_tf=bool(".ckpt" in model_name_or_path),
-            config=model_config)
-        # model = model_class.from_pretrained(
-        #     model_name_or_path,
-        #     from_tf=bool(".ckpt" in model_name_or_path),
-        #     trust_remote_code=True,
-        #     # use_flash_attention_2=True if "llama" in model_name_or_path else False,
-        #     config=model_config,
-        # )
+            trust_remote_code=True,
+            # use_flash_attention_2=True if "llama" in model_name_or_path else False,
+            config=model_config,
+        )
 
     model.config.end_token_id = tokenizer.eos_token_id
     model.config.pad_token_id = model.config.eos_token_id
