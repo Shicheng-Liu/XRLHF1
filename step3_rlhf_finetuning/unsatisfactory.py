@@ -23,7 +23,13 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Eval the finetued SFT model")
+    parser = argparse.ArgumentParser(description="Parition test results")
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        help="model name",
+        required=True,
+    )
     parser.add_argument(
         "--model_name_or_path_reward",
         type=str,
@@ -195,6 +201,10 @@ def main():
     reward_finetune_list = []
     reward_rlhf_list = []
     win_rate_list = []
+    satisfactory_prompts = []
+    unsatisfactory_prompts = []
+    satisfactory_responses = []
+    unsatisfactory_responses = []
     for prompt, base_response, sft_response, rlhf_response in tqdm(zip(prompts, response_base, response_sft, response_rlhf),total=len(prompts),desc="Evaluation process"):
         
         # print('base_response',base_response)
@@ -208,10 +218,35 @@ def main():
         reward_base_list.append(base_reward)
         reward_finetune_list.append(finetune_reward)
         reward_rlhf_list.append(rlhf_reward)
-        if rlhf_reward > finetune_reward:
+        if rlhf_reward >= finetune_reward:
             win_rate_list.append(1)
+            satisfactory_prompts.append(prompt)
+            satisfactory_responses.append(rlhf_response)
         else:
             win_rate_list.append(0)
+            unsatisfactory_prompts.append(prompt)
+            unsatisfactory_responses.append(rlhf_response)
+
+    satisfactory_results = []
+    unsatisfactory_results = []
+    for p, r in zip(satisfactory_prompts,satisfactory_responses):
+        satisfactory_results.append({
+            "prompt": p,
+            "satisfactory_response": r
+        })
+
+    with open(f"{args.model_name}_satisfactory.json","w") as f:
+        json.dump(satisfactory_results,f,indent=4)
+
+    for p, r in zip(unsatisfactory_prompts,unsatisfactory_responses):
+        unsatisfactory_results.append({
+            "prompt": p,
+            "unsatisfactory_response": r
+        })
+    
+    with open(f"{args.model_name}_unsatisfactory.json","w") as f:
+        json.dump(unsatisfactory_results,f,indent=4)
+
         
 
     print("reward for base model",np.mean(reward_base_list))
