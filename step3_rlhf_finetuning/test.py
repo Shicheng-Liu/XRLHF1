@@ -279,8 +279,7 @@ def main():
     args.end_of_conversation_token = "<|endoftext|>"
     additional_special_tokens = args.end_of_conversation_token if args.add_eot_token else None
     tokenizer = load_hf_tokenizer(args.model_name_or_path_baseline,
-                                  fast_tokenizer=True,
-                                  add_special_tokens=additional_special_tokens)
+                                  fast_tokenizer=True)  #,add_special_tokens=additional_special_tokens
 
     model_baseline = create_hf_model(AutoModelForCausalLM,
                                      args.model_name_or_path_baseline,
