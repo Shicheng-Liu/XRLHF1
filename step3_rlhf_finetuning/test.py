@@ -8,7 +8,12 @@ import torch
 import json
 import numpy as np
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoModelForCausalLM
+import sys
+import os
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+)
 
 from utils.model.model_utils import create_hf_model
 from utils.utils import to_device, load_hf_tokenizer
