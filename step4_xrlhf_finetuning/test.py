@@ -25,7 +25,12 @@ logger = logging.getLogger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Eval the finetued SFT model")
-    
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        help="model name",
+        required=True,
+    )
     parser.add_argument(
         "--model_name_or_path_xrlhf",
         type=str,
