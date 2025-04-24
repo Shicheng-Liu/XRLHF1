@@ -376,9 +376,9 @@ def main():
     args.global_rank = torch.distributed.get_rank()
 
     ds_config = get_train_ds_config(offload=args.offload,
-                                    dtype=args.dtype,
                                     stage=args.zero_stage,
                                     enable_tensorboard=args.enable_tensorboard,
+                                    bf16=True,
                                     tb_path=args.tensorboard_path,
                                     tb_name="step4_model")
     ds_config[
