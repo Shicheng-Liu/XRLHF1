@@ -10,7 +10,7 @@ export OPENBLAS_NUM_THREADS=4
 export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
 
-DEV=0,2
+DEV=0
 PORT=1237
 EVAL_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
 UNLEARN_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/step4_xrlhf_finetuning/opt-1.3b_unlearn.json"
