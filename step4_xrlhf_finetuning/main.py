@@ -395,12 +395,12 @@ def main():
     # load_hf_tokenizer will get the correct tokenizer and set padding tokens based on the model family
     args.end_of_conversation_token = "<|endoftext|>"
     additional_special_tokens = args.end_of_conversation_token if args.add_eot_token else None
-    tokenizer = load_hf_tokenizer(args.model_name_or_path,
+    tokenizer = load_hf_tokenizer(args.actor_model_path,
                                   fast_tokenizer=True,
                                   add_special_tokens=additional_special_tokens)
 
     model = create_hf_model(AutoModelForCausalLM,
-                            args.model_name_or_path,
+                            args.actor_model_path,
                             tokenizer,
                             ds_config,
                             disable_dropout=True)
@@ -426,7 +426,7 @@ def main():
         'train_batch_size'] = args.per_device_train_batch_size * torch.distributed.get_world_size(
         ) * args.gradient_accumulation_steps
     ref_model = create_hf_model(AutoModelForCausalLM,
-                                args.model_name_or_path,
+                                args.actor_model_path,
                                 tokenizer,
                                 ref_ds_eval_config,
                                 disable_dropout=True)
@@ -444,7 +444,7 @@ def main():
     # In general, since we are replacing the model head, it makes sense to reset
     # the LN that precedes it.
     force_optimize_params = []
-    if "bigscience/bloom-" in args.model_name_or_path:
+    if "bigscience/bloom-" in args.actor_model_path:
         zero_init_enabled = (args.zero_stage == 3)
         params = [
             model.rwtranrsformer.ln_f.weight, model.rwtranrsformer.ln_f.bias
