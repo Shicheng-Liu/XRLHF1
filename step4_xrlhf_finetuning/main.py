@@ -39,17 +39,17 @@ def parse_args():
         description=
         "Finetune a transformers model on a causal language modeling task")
     parser.add_argument('--unlearn_data_path',
-                        type=str,
+                        nargs="*",
                         help='Path to the unlearn set',
                         required=True,
                         )
     parser.add_argument('--retain_data_path',
-                        type=str,
+                        nargs="*",
                         help='Path to the retain set',
                         required=True,
                         )
     parser.add_argument('--eval_data_path',
-                        type=str,
+                        nargs="*",
                         help='Path to the eval set',
                         required=True,
                         )

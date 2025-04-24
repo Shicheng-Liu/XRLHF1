@@ -410,8 +410,7 @@ def create_prompt_dataset(
     torch.distributed.all_reduce(buf_create_cache)
 
     if local_rank <= 0 and (buf_create_cache.item() != 0 or reload):
-        print('data_path_number', len(data_path))
-        print('data_path',data_path)
+        
         if len(data_path) == 1:  # Single dataset.
             train_dataset, eval_dataset = create_dataset(
                 local_rank,
