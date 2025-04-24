@@ -418,7 +418,7 @@ def main():
         'train_batch_size'] = args.per_device_train_batch_size * torch.distributed.get_world_size(
         ) * args.gradient_accumulation_steps
     ref_ds_eval_config = get_eval_ds_config(offload=False,
-                                            dtype=args.dtype,
+                                            bf16=True,
                                             stage=ref_zero_stage)
     ref_ds_eval_config[
         'train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
