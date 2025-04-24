@@ -31,5 +31,7 @@ deepspeed main.py \
    --zero_stage $ZERO_STAGE \
    --deepspeed \
    --offload \
+   --lora_dim 128 \
+   --lora_module_name "layers." \
    --output_dir $OUTPUT \
    &> $OUTPUT/training.log

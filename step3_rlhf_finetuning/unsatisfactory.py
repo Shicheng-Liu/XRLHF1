@@ -234,24 +234,44 @@ def main():
 
     satisfactory_results = []
     unsatisfactory_results = []
+    # for p, s, r in zip(satisfactory_prompts,satisfactory_sft,satisfactory_responses):
+    #     satisfactory_results.append({
+    #         "prompt": p,
+    #         "sft_response": s,
+    #         "satisfactory_response": r
+    #     })
+
+    # with open(f"{args.model_name}_satisfactory.json","w") as f:
+    #     json.dump(satisfactory_results,f,indent=3)
+
     for p, s, r in zip(satisfactory_prompts,satisfactory_sft,satisfactory_responses):
         satisfactory_results.append({
             "prompt": p,
-            "sft_response": s,
-            "satisfactory_response": r
+            "chosen": r,
+            "rejected": s
         })
 
-    with open(f"{args.model_name}_satisfactory.json","w") as f:
+    with open(f"{args.model_name}_retain.json","w") as f:
         json.dump(satisfactory_results,f,indent=3)
+
+    # for p, s, r in zip(unsatisfactory_prompts,unsatisfactory_sft,unsatisfactory_responses):
+    #     unsatisfactory_results.append({
+    #         "prompt": p,
+    #         "sft_response": s,
+    #         "unsatisfactory_response": r
+    #     })
+    
+    # with open(f"{args.model_name}_unsatisfactory.json","w") as f:
+    #     json.dump(unsatisfactory_results,f,indent=3)
 
     for p, s, r in zip(unsatisfactory_prompts,unsatisfactory_sft,unsatisfactory_responses):
         unsatisfactory_results.append({
             "prompt": p,
-            "sft_response": s,
-            "unsatisfactory_response": r
+            "chosen": s,
+            "rejected": r
         })
     
-    with open(f"{args.model_name}_unsatisfactory.json","w") as f:
+    with open(f"{args.model_name}_unlearn.json","w") as f:
         json.dump(unsatisfactory_results,f,indent=3)
 
         
