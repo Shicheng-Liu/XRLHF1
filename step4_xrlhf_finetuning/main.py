@@ -5,6 +5,11 @@
 # DeepSpeed Team
 import argparse
 import math
+import os
+import sys
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+)
 
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
@@ -20,31 +25,28 @@ import deepspeed
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed import get_accelerator
 
-from dschat.utils.data.data_utils import create_prompt_dataset, DataCollatorReward
-from dschat.utils.utils import print_rank_0, to_device, save_hf_format, set_random_seed, get_all_reduce_mean, get_optimizer_grouped_parameters, save_zero_three_model, load_hf_tokenizer
-from dschat.utils.ds_utils import get_train_ds_config, get_eval_ds_config
-from dschat.utils.module.lora import convert_linear_layer_to_lora, convert_lora_to_linear_layer, only_optimize_lora_parameters, make_model_gradient_checkpointing_compatible
-from dschat.utils.model.model_utils import create_hf_model, causal_lm_model_to_fp32_loss
-from dschat.utils.perf import print_throughput
+from utils.data.data_utils import create_prompt_dataset, DataCollatorReward
+from utils.utils import print_rank_0, to_device, save_hf_format, set_random_seed, get_all_reduce_mean, get_optimizer_grouped_parameters, save_zero_three_model, load_hf_tokenizer
+from utils.ds_utils import get_train_ds_config, get_eval_ds_config
+from utils.module.lora import convert_linear_layer_to_lora, convert_lora_to_linear_layer, only_optimize_lora_parameters, make_model_gradient_checkpointing_compatible
+from utils.model.model_utils import create_hf_model, causal_lm_model_to_fp32_loss
+from utils.perf import print_throughput
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description=
         "Finetune a transformers model on a causal language modeling task")
-    parser.add_argument('--data_path',
-                        nargs='*',
-                        default=['Dahoas/rm-static'],
-                        help='Path to the training dataset. Accepted format:'
-                        '1) a single data path, 2) multiple datasets in the'
-                        'form: dataset1-path dataset2-path ...')
-    parser.add_argument('--data_split',
+    parser.add_argument('--unlearn_data_path',
                         type=str,
-                        default='2,4,4',
-                        help='Comma-separated list of proportions for training'
-                        'phase 1, 2, and 3 data. For example the split `6,2,2`'
-                        'will use 60%% of data for phase 1, 20%% for phase 2'
-                        'and 20%% for phase 3.')
+                        help='Path to the unlearn set',
+                        required=True,
+                        )
+    parser.add_argument('--retain_data_path',
+                        type=str,
+                        help='Path to the retain set',
+                        required=True,
+                        )
     parser.add_argument(
         '--data_output_path',
         type=str,
@@ -53,10 +55,10 @@ def parse_args():
         'Where to store the data-related files such as shuffle index. This needs to be on a local storage of a node (not on a shared storage)'
     )
     parser.add_argument(
-        "--model_name_or_path",
+        "--actor_model_path",
         type=str,
         help=
-        "Path to pretrained model or model identifier from huggingface.co/models.",
+        "Path to rlhf actor",
         required=True,
     )
     parser.add_argument(
@@ -92,20 +94,20 @@ def parse_args():
                         type=int,
                         default=1,
                         help="Total number of training epochs to perform.")
-    # Reference: https://github.com/eric-mitchell/direct-preference-optimization/blob/main/trainers.py
+    
     parser.add_argument(
         "--beta",
         type=float,
         default=1e-1,
         help=
-        "Temperature parameter for the DPO loss, typically something in the range of 0.1 to 0.5. We ignore the reference model as beta -> 0."
+        "Temperature parameter, typically something in the range of 0.1 to 0.5."
     )
     parser.add_argument(
         "--label_smoothing",
         type=float,
         default=0.0,
         help=
-        "conservativeness for DPO loss, which assumes that preferences are noisy (flipped with probability label_smoothing)"
+        "conservativeness for loss, which assumes that preferences are noisy (flipped with probability label_smoothing)"
     )
     parser.add_argument(
         "--gradient_accumulation_steps",
@@ -199,7 +201,7 @@ def parse_args():
                         help='Enable tensorboard logging')
     parser.add_argument('--tensorboard_path',
                         type=str,
-                        default="step2_tensorboard")
+                        default="step4_tensorboard")
     ## Tokenizer
     parser.add_argument(
         "--add_eot_token",
@@ -215,7 +217,7 @@ def parse_args():
     return args
 
 
-# Reference: https://github.com/huggingface/trl/blob/main/trl/trainer/dpo_trainer.py
+
 def get_batch_logps(logits, input_ids, label_mask):
     labels = input_ids.clone() * label_mask
     assert logits.shape[:-1] == labels.shape, \
@@ -228,6 +230,35 @@ def get_batch_logps(logits, input_ids, label_mask):
                                    index=labels.unsqueeze(2)).squeeze(2)
     return (per_token_logps * label_mask).sum(-1)
 
+def compute_loss(model, ref_model, tokenizer, batch, args):
+    batch_size = batch['input_ids'].shape[0] // 2
+    chosen_input_ids = batch['input_ids'][:batch_size]
+    rejected_input_ids = batch['input_ids'][batch_size:]
+    label_mask = (batch['input_ids'] != tokenizer.pad_token_id).int()
+
+    for i in range(batch_size):
+        divergence_ind = (chosen_input_ids[i] != rejected_input_ids[i]).nonzero().squeeze(-1)
+        divergence_ind = divergence_ind[0] if len(divergence_ind) > 0 else 0
+        label_mask[i][:divergence_ind] = 0
+        label_mask[i + batch_size][:divergence_ind] = 0
+
+    outputs = model(**batch, use_cache=False)
+    with torch.no_grad():
+        ref_outputs = ref_model(**batch)
+
+    logps = get_batch_logps(outputs.logits, batch['input_ids'], label_mask)
+    ref_logps = get_batch_logps(ref_outputs.logits, batch['input_ids'], label_mask)
+
+    chosen_logps = logps[:batch_size]
+    rejected_logps = logps[batch_size:]
+    ref_chosen_logps = ref_logps[:batch_size]
+    ref_rejected_logps = ref_logps[batch_size:]
+
+    logits = args.beta * ((chosen_logps - ref_chosen_logps) - (rejected_logps - ref_rejected_logps))
+    loss = (- torch.nn.functional.logsigmoid(logits) * (1 - args.label_smoothing) -
+            torch.nn.functional.logsigmoid(-logits) * args.label_smoothing).mean(0)
+
+    return 1.0*loss/batch_size
 
 def main():
     args = parse_args()
@@ -248,7 +279,7 @@ def main():
                                     stage=args.zero_stage,
                                     enable_tensorboard=args.enable_tensorboard,
                                     tb_path=args.tensorboard_path,
-                                    tb_name="step2_model")
+                                    tb_name="step4_model")
     ds_config[
         'train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
     ds_config[
@@ -271,7 +302,7 @@ def main():
                             args.model_name_or_path,
                             tokenizer,
                             ds_config,
-                            dropout=args.dropout)
+                            disable_dropout=True)
 
     # DS Config for ref model
     ref_zero_stage = args.zero_stage
@@ -297,7 +328,7 @@ def main():
                                 args.model_name_or_path,
                                 tokenizer,
                                 ref_ds_eval_config,
-                                dropout=args.dropout)
+                                disable_dropout=True)
     # End of DS config for ref model
 
     if args.compute_fp32_loss:
@@ -526,3 +557,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
