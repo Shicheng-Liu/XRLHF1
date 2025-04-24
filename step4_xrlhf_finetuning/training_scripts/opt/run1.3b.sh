@@ -28,7 +28,9 @@ mkdir -p $OUTPUT
 
 (deepspeed --include localhost:$DEV --master_port $PORT \
 main.py --actor_model_path $ACTOR_MODEL_PATH \
-   --unlearn_data_path $UNLEARN_DATA_PATH --retain_data_path $RETAIN_DATA_PATH --eval_data_path $EVAL_DATA_PATH \
+   --unlearn_data_path $UNLEARN_DATA_PATH \
+   --retain_data_path $RETAIN_DATA_PATH \
+   --eval_data_path $EVAL_DATA_PATH \
    --weight_decay 0.1 --dropout 0.0 --gradient_accumulation_steps 4 --zero_stage $ZERO_STAGE \
    --enable_tensorboard \
    --tensorboard_path $OUTPUT \
