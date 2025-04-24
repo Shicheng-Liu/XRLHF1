@@ -618,7 +618,7 @@ def main():
 
     for epoch in range(args.num_train_epochs):
         print_rank_0(
-            f"Beginning of Epoch {epoch+1}/{args.num_train_epochs}, Total Micro Batches {len(retain_dataloader)}",
+            f"Beginning of Epoch {epoch+1}/{args.num_train_epochs}, Total Micro Batches {len(train_dataloader)}",
             args.global_rank)
         model.train()
         import time
