@@ -10,7 +10,7 @@ import sys
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 )
-
+import hashlib
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
@@ -24,6 +24,7 @@ from transformers import (
 import deepspeed
 from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 from deepspeed import get_accelerator
+from utils.data.data_utils import get_raw_dataset, PromptDataset
 
 from utils.data.data_utils import create_prompt_dataset, DataCollatorReward
 from utils.utils import print_rank_0, to_device, save_hf_format, set_random_seed, get_all_reduce_mean, get_optimizer_grouped_parameters, save_zero_three_model, load_hf_tokenizer
@@ -47,10 +48,22 @@ def parse_args():
                         help='Path to the retain set',
                         required=True,
                         )
+    parser.add_argument('--eval_data_path',
+                        type=str,
+                        help='Path to the eval set',
+                        required=True,
+                        )
     parser.add_argument(
         '--data_output_path',
         type=str,
         default='/tmp/data_files/',
+        help=
+        'Where to store the data-related files such as shuffle index. This needs to be on a local storage of a node (not on a shared storage)'
+    )
+    parser.add_argument(
+        '--eval_data_output_path',
+        type=str,
+        default='/tmp/data_files/eval/',
         help=
         'Where to store the data-related files such as shuffle index. This needs to be on a local storage of a node (not on a shared storage)'
     )
@@ -217,6 +230,94 @@ def parse_args():
     return args
 
 
+def get_dataset(local_rank,
+        dataset_name,
+        output_path,
+        seed,
+        tokenizer,
+        end_of_conversation_token,
+        max_seq_len):
+    raw_dataset = get_raw_dataset(dataset_name, output_path, seed, local_rank)
+    train_dataset = raw_dataset.get_train_data()
+    prompt_dataset = []
+    chosen_dataset = []
+    reject_dataset = []
+    for i, tmp_data in enumerate(train_dataset):
+        # tokenize the text
+        chosen_sentence = raw_dataset.get_prompt_and_chosen(
+            tmp_data
+        )  # the accept response
+        reject_sentence = raw_dataset.get_prompt_and_rejected(
+            tmp_data
+        )  # the accept response
+        if chosen_sentence is not None and reject_sentence is not None:
+            chosen_sentence += end_of_conversation_token  # the accept response
+            reject_sentence += end_of_conversation_token
+            chosen_token = tokenizer(
+                chosen_sentence,
+                max_length=max_seq_len,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
+            )
+            reject_token = tokenizer(
+                reject_sentence,
+                max_length=max_seq_len,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
+            )
+            chosen_token["input_ids"] = chosen_token["input_ids"]
+            chosen_token["attention_mask"] = chosen_token["attention_mask"]
+            chosen_dataset.append(chosen_token)
+
+            reject_token["input_ids"] = reject_token["input_ids"]
+            reject_token["attention_mask"] = reject_token["attention_mask"]
+            reject_dataset.append(reject_token)
+    return PromptDataset(
+        prompt_dataset,
+        chosen_dataset,
+        reject_dataset,
+        tokenizer.pad_token_id,
+        train_phase=2,
+    )
+
+    
+def get_prompt_dataset(local_rank,
+    data_path,
+    output_path,
+    seed,
+    tokenizer,
+    max_seq_len,
+    end_of_conversation_token="<|endoftext|>",
+    reload=False):
+    os.makedirs(output_path, exist_ok=True)
+    fname = "_".join(data_path)
+    tokenizer_name = tokenizer.init_kwargs["name_or_path"].replace("/", "_")
+    fname = f"{fname}_phase4_seed{seed}_tokenizer{tokenizer_name}_seqlen{max_seq_len}"
+    fname = "_".join(fname.split("/"))
+    fname = hashlib.sha256(
+        fname.encode()
+    ).hexdigest()  # hash the file name to avoid too long file name
+    train_fname = f"{output_path}/traindata_{fname}.pt"
+
+    cache_found = os.path.isfile(train_fname) 
+    buf_create_cache = torch.ByteTensor([not cache_found]).cuda()
+    torch.distributed.all_reduce(buf_create_cache)
+    if local_rank <= 0 and (buf_create_cache.item() != 0 or reload):
+        train_dataset = get_dataset(
+            local_rank,
+            data_path[0],
+            output_path,
+            seed,
+            tokenizer,
+            end_of_conversation_token,
+            max_seq_len,
+        )
+        torch.save(train_dataset, train_fname)
+    torch.distributed.barrier()
+    return torch.load(train_fname,weights_only=False)
+
 
 def get_batch_logps(logits, input_ids, label_mask):
     labels = input_ids.clone() * label_mask
@@ -258,7 +359,7 @@ def compute_loss(model, ref_model, tokenizer, batch, args):
     loss = (- torch.nn.functional.logsigmoid(logits) * (1 - args.label_smoothing) -
             torch.nn.functional.logsigmoid(-logits) * args.label_smoothing).mean(0)
 
-    return 1.0*loss/batch_size
+    return loss
 
 def main():
     args = parse_args()
@@ -366,23 +467,46 @@ def main():
 
     # Prepare the data
     train_phase = 2
-    train_dataset, eval_dataset = create_prompt_dataset(
-        args.local_rank, args.data_path, args.data_split,
-        args.data_output_path, train_phase, args.seed, tokenizer,
+    _, eval_dataset = create_prompt_dataset(
+        args.local_rank, args.eval_data_path, args.data_split,
+        args.eval_data_output_path, train_phase, args.seed, tokenizer,
         args.max_seq_len)
-
+    unlearn_dataset = get_prompt_dataset(
+        args.local_rank, args.unlearn_data_path,
+        args.output_path,
+        args.seed,
+        tokenizer,
+        args.max_seq_len)
+    retain_dataset = get_prompt_dataset(
+        args.local_rank, args.retain_data_path,
+        args.output_path,
+        args.seed,
+        tokenizer,
+        args.max_seq_len)
     # DataLoaders creation:
     data_collator = DataCollatorReward()
     if args.local_rank == -1:
-        train_sampler = RandomSampler(train_dataset)
+        #train_sampler = RandomSampler(train_dataset)
+        unlearn_sampler = RandomSampler(unlearn_dataset)
+        retain_sampler = RandomSampler(retain_dataset)
         eval_sampler = SequentialSampler(eval_dataset)
     else:
-        train_sampler = DistributedSampler(train_dataset)
+        #train_sampler = DistributedSampler(train_dataset)
+        unlearn_sampler = DistributedSampler(unlearn_dataset)
+        retain_sampler = DistributedSampler(retain_dataset)
         eval_sampler = DistributedSampler(eval_dataset)
-    train_dataloader = DataLoader(train_dataset,
-                                  collate_fn=data_collator,
-                                  sampler=train_sampler,
-                                  batch_size=args.per_device_train_batch_size)
+    # train_dataloader = DataLoader(train_dataset,
+    #                               collate_fn=data_collator,
+    #                               sampler=train_sampler,
+    #                               batch_size=args.per_device_train_batch_size)
+    unlearn_dataloader = DataLoader(unlearn_dataset,
+                                 collate_fn=data_collator,
+                                 sampler=unlearn_sampler,
+                                 batch_size=args.per_device_train_batch_size)
+    retain_dataloader = DataLoader(retain_dataset,
+                                 collate_fn=data_collator,
+                                 sampler=retain_sampler,
+                                 batch_size=args.per_device_train_batch_size)
     eval_dataloader = DataLoader(eval_dataset,
                                  collate_fn=data_collator,
                                  sampler=eval_sampler,
@@ -446,7 +570,7 @@ def main():
                               betas=(0.9, 0.95))
 
     num_update_steps_per_epoch = math.ceil(
-        len(train_dataloader) / args.gradient_accumulation_steps)
+        len(retain_dataloader) / args.gradient_accumulation_steps)
     lr_scheduler = get_scheduler(
         name=args.lr_scheduler_type,
         optimizer=optimizer,
@@ -480,49 +604,30 @@ def main():
 
     for epoch in range(args.num_train_epochs):
         print_rank_0(
-            f"Beginning of Epoch {epoch+1}/{args.num_train_epochs}, Total Micro Batches {len(train_dataloader)}",
+            f"Beginning of Epoch {epoch+1}/{args.num_train_epochs}, Total Micro Batches {len(retain_dataloader)}",
             args.global_rank)
         model.train()
         import time
-        for step, batch in enumerate(train_dataloader):
+        unlearn_iter = iter(unlearn_dataloader)
+        for step, retain_batch in enumerate(retain_dataloader):
             start = time.time()
-            batch = to_device(batch, device)
-            batch_size = batch['input_ids'].shape[0] // 2
-            chosen_input_ids = batch['input_ids'][:batch_size]
-            rejected_input_ids = batch['input_ids'][batch_size:]
-            label_mask = (batch['input_ids'] != tokenizer.pad_token_id).int()
-            for i in range(batch_size):
-                divergence_ind = (chosen_input_ids[i] !=
-                                  rejected_input_ids[i]).nonzero().squeeze(-1)
-                if len(divergence_ind) > 0:
-                    divergence_ind = divergence_ind[0]
-                else:
-                    divergence_ind = 0
-                label_mask[i][:divergence_ind] = 0
-                label_mask[i + batch_size][:divergence_ind] = 0
-            outputs = model(**batch, use_cache=False)
-            with torch.no_grad():
-                ref_outputs = ref_model(**batch)
-
-            logps = get_batch_logps(outputs.logits, batch['input_ids'],
-                                    label_mask)
-            ref_logps = get_batch_logps(ref_outputs.logits, batch['input_ids'],
-                                        label_mask)
-
-            chosen_logps = logps[:batch_size]
-            rejected_logps = logps[batch_size:]
-            ref_chosen_logps = ref_logps[:batch_size]
-            ref_rejected_logps = ref_logps[batch_size:]
-
-            logits = args.beta * ((chosen_logps - ref_chosen_logps) -
-                                  (rejected_logps - ref_rejected_logps))
-            loss = (- torch.nn.functional.logsigmoid(logits) * (1 - args.label_smoothing) - \
-                    torch.nn.functional.logsigmoid(-logits) * args.label_smoothing).mean(0)
+            try:
+                unlearn_batch = next(unlearn_iter)
+            except StopIteration:
+                # when unlearn is exhausted, recreate a new iterator, shuffling again
+                unlearn_iter = iter(unlearn_dataloader)
+                unlearn_batch = next(unlearn_iter)
+            retain_batch = to_device(retain_batch, device)
+            unlearn_batch = to_device(unlearn_batch, device)
+            
+            retain_loss = compute_loss(model, ref_model, tokenizer, retain_batch, args)
+            unlearn_loss = compute_loss(model, ref_model, tokenizer, unlearn_batch, args)
+            total_loss = retain_loss - unlearn_loss
             if args.print_loss:
                 print(
-                    f"Epoch: {epoch}, Step: {step}, Rank: {torch.distributed.get_rank()}, loss = {loss}"
+                    f"Epoch: {epoch}, Step: {step}, Rank: {torch.distributed.get_rank()}, loss = {total_loss}"
                 )
-            model.backward(loss)
+            model.backward(total_loss)
             model.step()
             end = time.time()
             if torch.distributed.get_rank() == 0:

@@ -21,6 +21,10 @@ IGNORE_INDEX = -100
 
 
 def get_raw_dataset(dataset_name, output_path, seed, local_rank):
+    if "retain" in dataset_name or "unlearn" in dataset_name:
+        return raw_datasets.LocalDataset(
+            output_path, seed, local_rank, dataset_name
+        )
     if "Dahoas/rm-static" in dataset_name:
         return raw_datasets.DahoasRmstaticDataset(
             output_path, seed, local_rank, dataset_name

@@ -42,6 +42,31 @@ class PromptRawDataset(object):
     def get_prompt_and_rejected(self, sample):
         return
 
+class LocalDataset(PromptRawDataset):
+    def __init__(self, output_path, seed, local_rank, dataset_name):
+        super().__init__(output_path, seed, local_rank, dataset_name)
+
+    def get_train_data(self):
+        return self.raw_datasets["train"]
+
+    def get_eval_data(self):
+        return self.raw_datasets["train"]
+
+    def get_prompt(self, sample):
+        return sample["prompt"]
+
+    def get_chosen(self, sample):
+        return sample["chosen"]
+
+    def get_rejected(self, sample):
+        return sample["rejected"]
+
+    def get_prompt_and_chosen(self, sample):
+        return sample["prompt"] + sample["chosen"]
+
+    def get_prompt_and_rejected(self, sample):
+        return sample["prompt"] + sample["rejected"]
+
 
 # English dataset
 class DahoasRmstaticDataset(PromptRawDataset):

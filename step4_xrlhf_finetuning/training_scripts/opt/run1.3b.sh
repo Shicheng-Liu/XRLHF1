@@ -12,6 +12,7 @@ export TOKENIZERS_PARALLELISM=False
 
 DEV=1,2
 PORT=1237
+EVAL_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
 UNLEARN_DATA_PATH="opt-1.3b_unlearn.json"
 RETAIN_DATA_PATH="opt-1.3b_retain.json"
 ACTOR_MODEL_PATH=~/workspace/siyuan/ReMax/step3_rlhf_finetuning/output/opt-1.3b/full-hh-rlhf/actor
@@ -25,10 +26,10 @@ if [ "$ZERO_STAGE" == "" ]; then
 fi
 mkdir -p $OUTPUT
 
-deepspeed --include localhost:$DEV --master_port $PORT \
+(deepspeed --include localhost:$DEV --master_port $PORT \
 main.py --actor_model_path $ACTOR_MODEL_PATH \
-   --unlearn_data_path $UNLEARN_DATA_PATH --retain_data_path $RETAIN_DATA_PATH\
+   --unlearn_data_path $UNLEARN_DATA_PATH --retain_data_path $RETAIN_DATA_PATH --eval_data_path $EVAL_DATA_PATH \
    --weight_decay 0.1 --dropout 0.0 --gradient_accumulation_steps 4 --zero_stage $ZERO_STAGE \
    --enable_tensorboard \
    --tensorboard_path $OUTPUT \
-   --deepspeed --output_dir $OUTPUT &> $OUTPUT/training.log
+   --deepspeed --output_dir $OUTPUT) 2>&1 | tee $OUTPUT/training.log
