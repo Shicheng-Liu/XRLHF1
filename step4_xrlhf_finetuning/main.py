@@ -202,6 +202,13 @@ def parse_args():
         help=
         "Initial LoRA learning rate (after the potential warmup period) to use."
     )
+    parser.add_argument(
+        "--data_split",
+        type=str,
+        default="2,4,4",
+        help="Comma-separated list of proportions for training phase 1, 2, and 3 data. For example the split `2,4,4` "
+        "will use 60%% of data for phase 1, 20%% for phase 2 and 20%% for phase 3.",
+    )
     ## low precision
     parser.add_argument(
         '--compute_fp32_loss',
