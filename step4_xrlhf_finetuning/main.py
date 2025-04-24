@@ -54,9 +54,16 @@ def parse_args():
                         required=True,
                         )
     parser.add_argument(
-        '--data_output_path',
+        '--unlearn_data_output_path',
         type=str,
-        default='/tmp/data_files/',
+        default='/tmp/data_files/unlearn/',
+        help=
+        'Where to store the data-related files such as shuffle index. This needs to be on a local storage of a node (not on a shared storage)'
+    )
+    parser.add_argument(
+        '--retain_data_output_path',
+        type=str,
+        default='/tmp/data_files/retain/',
         help=
         'Where to store the data-related files such as shuffle index. This needs to be on a local storage of a node (not on a shared storage)'
     )
@@ -480,13 +487,13 @@ def main():
         args.max_seq_len)
     unlearn_dataset = get_prompt_dataset(
         args.local_rank, args.unlearn_data_path,
-        args.output_path,
+        args.unlearn_data_output_path,
         args.seed,
         tokenizer,
         args.max_seq_len)
     retain_dataset = get_prompt_dataset(
         args.local_rank, args.retain_data_path,
-        args.output_path,
+        args.retain_data_output_path,
         args.seed,
         tokenizer,
         args.max_seq_len)
