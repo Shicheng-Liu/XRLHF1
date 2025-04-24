@@ -32,7 +32,12 @@ def parse_args():
         help="Path to rlhf model",
         required=True,
     )
-   
+    parser.add_argument(
+        "--model_name_or_path_baseline",
+        type=str,
+        help="Path to pretrain model",
+        required=True,
+    )
     parser.add_argument(
         "--data_path",
         type=str,
