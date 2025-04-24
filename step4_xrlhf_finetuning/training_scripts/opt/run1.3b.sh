@@ -27,7 +27,7 @@ fi
 mkdir -p $OUTPUT
 
 (deepspeed --include localhost:$DEV --master_port $PORT \
-main.py --actor_model_path $ACTOR_MODEL_PATH \
+main_dpo.py --actor_model_path $ACTOR_MODEL_PATH \
    --unlearn_data_path $UNLEARN_DATA_PATH \
    --retain_data_path $RETAIN_DATA_PATH \
    --eval_data_path $EVAL_DATA_PATH \
