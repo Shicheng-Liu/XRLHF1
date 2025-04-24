@@ -424,16 +424,16 @@ def main():
     if ref_zero_stage != 3:
         # If it is ZeRO-3 then we use it for everything, otherwise assume we have enough memory for ref model
         ref_zero_stage = 0
-    ref_ds_config = get_eval_ds_config(args.offload_reference_model,
-                                       args.dtype, ref_zero_stage)
+    ref_ds_config = get_eval_ds_config(offload=args.offload_reference_model,
+                                       stage=ref_zero_stage, bf16=True)
     ref_ds_config[
         'train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
     ref_ds_config[
         'train_batch_size'] = args.per_device_train_batch_size * torch.distributed.get_world_size(
         ) * args.gradient_accumulation_steps
     ref_ds_eval_config = get_eval_ds_config(offload=False,
-                                            bf16=True,
-                                            stage=ref_zero_stage)
+                                            stage=ref_zero_stage,
+                                            bf16=True)
     ref_ds_eval_config[
         'train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
     ref_ds_eval_config[
