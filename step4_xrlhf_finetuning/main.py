@@ -474,7 +474,6 @@ def main():
 
     # Prepare the data
     train_phase = 2
-    print("eval_data_path",args.eval_data_path)
     _, eval_dataset = create_prompt_dataset(
         args.local_rank, args.eval_data_path, args.data_split,
         args.eval_data_output_path, train_phase, args.seed, tokenizer,
