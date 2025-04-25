@@ -10,7 +10,7 @@ export OPENBLAS_NUM_THREADS=4
 export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
 
-DEV=0
+DEV=1,2
 PORT=1237
 EVAL_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
 UNLEARN_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/step4_xrlhf_finetuning/opt-1.3b_unlearn.json"
@@ -31,7 +31,7 @@ main_dpo.py --actor_model_path $ACTOR_MODEL_PATH \
    --unlearn_data_path $UNLEARN_DATA_PATH \
    --retain_data_path $RETAIN_DATA_PATH \
    --eval_data_path $EVAL_DATA_PATH \
-   --weight_decay 0.1 --dropout 0.0 --gradient_accumulation_steps 8 --zero_stage $ZERO_STAGE \
+   --weight_decay 0.1 --dropout 0.0 --gradient_accumulation_steps 4 --zero_stage $ZERO_STAGE \
    --enable_tensorboard \
    --tensorboard_path $OUTPUT \
    --deepspeed --output_dir $OUTPUT) 2>&1 | tee $OUTPUT/training.log
