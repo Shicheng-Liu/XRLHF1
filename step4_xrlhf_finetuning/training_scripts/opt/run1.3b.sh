@@ -81,7 +81,7 @@ eps=1
 grad_accum=4
 wd=0
 ZERO_STAGE=2
-
+exp_name="opt-1.3b"
 # training commands ==================================
 
 
@@ -101,7 +101,7 @@ main_dpo.py \
    --data_output_path $data_output_path \
    --output_dir $OUTPUT \
    --enable_tensorboard \
-   --tensorboard_name_path $OUTPUT \
+   --tensorboard_name_path $exp_name:$OUTPUT \
    --per_device_train_batch_size $train_bsz \
    --per_device_eval_batch_size $eval_bsz \
    --max_seq_len $max_len \
