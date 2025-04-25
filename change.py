@@ -8,10 +8,13 @@ def fix_json_file(file_name):
     # Fix the issue by adding commas between JSON objects
     content = content.replace('}{', '}, {')
 
-    # Wrap the content in square brackets to form a valid JSON array
-    content = f"[{content}]"
+    # Check if the content already starts and ends with square brackets
+    if not content.startswith('['):
+        content = f"[{content}"
+    if not content.endswith(']'):
+        content = f"{content}]"
 
-    # Load the corrected content into a JSON object
+    # Now, try to load the fixed content as JSON
     try:
         data = json.loads(content)
     except json.JSONDecodeError as e:
