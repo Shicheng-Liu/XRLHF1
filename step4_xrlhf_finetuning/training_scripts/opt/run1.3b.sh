@@ -61,7 +61,7 @@ save_step_interval=-1
 num_save_checkpoint=20
 loss_type="dpo"
 dataset_name="full-hh-rlhf"
-dataset_path="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
+dataset_path="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf-step4"
 data_output_path="data_output"
 if [ "$OUTPUT" == "" ]; then
     OUTPUT=./output/opt-1.3b/full-hh-rlhf
