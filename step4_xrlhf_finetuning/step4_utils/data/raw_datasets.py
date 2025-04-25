@@ -44,8 +44,8 @@ class DahoasFULLHHRLHFDataset(PromptRawDataset):
         super().__init__(seed, local_rank)
         self.dataset_name = "Dahoas/full-hh-rlhf"
         self.dataset_name_clean = "full-hh-rlhf"
-        self.raw_datasets = {"train": json.load(open(os.path.join(dataset_path, "train.jsonl"), "r")) if os.path.isfile(os.path.join(dataset_path, "train.jsonl")) else None,
-                             "test": json.load(open(os.path.join(dataset_path, "test.jsonl"), "r"))}
+        self.raw_datasets = {"train": json.load(open(os.path.join(dataset_path, "train.json"), "r")) if os.path.isfile(os.path.join(dataset_path, "train.jsonl")) else None,
+                             "test": json.load(open(os.path.join(dataset_path, "test.json"), "r"))}
         
     def get_train_data(self):
         return self.raw_datasets['train']
