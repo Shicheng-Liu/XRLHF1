@@ -243,96 +243,6 @@ def parse_args():
 
     return args
 
-
-def get_dataset(local_rank,
-        dataset_name,
-        output_path,
-        seed,
-        tokenizer,
-        end_of_conversation_token,
-        max_seq_len):
-    raw_dataset = get_raw_dataset(dataset_name, output_path, seed, local_rank)
-    train_dataset = raw_dataset.get_train_data()
-    prompt_dataset = []
-    chosen_dataset = []
-    reject_dataset = []
-    for i, tmp_data in enumerate(train_dataset):
-        # tokenize the text
-        chosen_sentence = raw_dataset.get_prompt_and_chosen(
-            tmp_data
-        )  # the accept response
-        reject_sentence = raw_dataset.get_prompt_and_rejected(
-            tmp_data
-        )  # the accept response
-        if chosen_sentence is not None and reject_sentence is not None:
-            chosen_sentence += end_of_conversation_token  # the accept response
-            reject_sentence += end_of_conversation_token
-            chosen_token = tokenizer(
-                chosen_sentence,
-                max_length=max_seq_len,
-                padding="max_length",
-                truncation=True,
-                return_tensors="pt",
-            )
-            reject_token = tokenizer(
-                reject_sentence,
-                max_length=max_seq_len,
-                padding="max_length",
-                truncation=True,
-                return_tensors="pt",
-            )
-            chosen_token["input_ids"] = chosen_token["input_ids"]
-            chosen_token["attention_mask"] = chosen_token["attention_mask"]
-            chosen_dataset.append(chosen_token)
-
-            reject_token["input_ids"] = reject_token["input_ids"]
-            reject_token["attention_mask"] = reject_token["attention_mask"]
-            reject_dataset.append(reject_token)
-    return PromptDataset(
-        prompt_dataset,
-        chosen_dataset,
-        reject_dataset,
-        tokenizer.pad_token_id,
-        train_phase=2,
-    )
-
-    
-def get_prompt_dataset(local_rank,
-    data_path,
-    output_path,
-    seed,
-    tokenizer,
-    max_seq_len,
-    end_of_conversation_token="<|endoftext|>",
-    reload=False):
-    os.makedirs(output_path, exist_ok=True)
-    fname = "_".join(data_path)
-    tokenizer_name = tokenizer.init_kwargs["name_or_path"].replace("/", "_")
-    fname = f"{fname}_phase4_seed{seed}_tokenizer{tokenizer_name}_seqlen{max_seq_len}"
-    fname = "_".join(fname.split("/"))
-    fname = hashlib.sha256(
-        fname.encode()
-    ).hexdigest()  # hash the file name to avoid too long file name
-    train_fname = f"{output_path}/traindata_{fname}.pt"
-
-    cache_found = os.path.isfile(train_fname) 
-    buf_create_cache = torch.ByteTensor([not cache_found]).cuda()
-    torch.distributed.all_reduce(buf_create_cache)
-    if local_rank <= 0 and (buf_create_cache.item() != 0 or reload):
-        train_dataset = get_dataset(
-            local_rank,
-            data_path[0],
-            output_path,
-            seed,
-            tokenizer,
-            end_of_conversation_token,
-            max_seq_len,
-        )
-        torch.save(train_dataset, train_fname)
-    torch.distributed.barrier()
-    return torch.load(train_fname,weights_only=False)
-
-
 def get_batch_logps(logits, input_ids, label_mask):
     labels = input_ids.clone() * label_mask
     assert logits.shape[:-1] == labels.shape, \
@@ -344,36 +254,6 @@ def get_batch_logps(logits, input_ids, label_mask):
                                    dim=2,
                                    index=labels.unsqueeze(2)).squeeze(2)
     return (per_token_logps * label_mask).sum(-1)
-
-def compute_loss(model, ref_model, tokenizer, batch, args):
-    batch_size = batch['input_ids'].shape[0] // 2
-    chosen_input_ids = batch['input_ids'][:batch_size]
-    rejected_input_ids = batch['input_ids'][batch_size:]
-    label_mask = (batch['input_ids'] != tokenizer.pad_token_id).int()
-
-    for i in range(batch_size):
-        divergence_ind = (chosen_input_ids[i] != rejected_input_ids[i]).nonzero().squeeze(-1)
-        divergence_ind = divergence_ind[0] if len(divergence_ind) > 0 else 0
-        label_mask[i][:divergence_ind] = 0
-        label_mask[i + batch_size][:divergence_ind] = 0
-
-    outputs = model(**batch, use_cache=False)
-    with torch.no_grad():
-        ref_outputs = ref_model(**batch)
-
-    logps = get_batch_logps(outputs.logits, batch['input_ids'], label_mask)
-    ref_logps = get_batch_logps(ref_outputs.logits, batch['input_ids'], label_mask)
-
-    chosen_logps = logps[:batch_size]
-    rejected_logps = logps[batch_size:]
-    ref_chosen_logps = ref_logps[:batch_size]
-    ref_rejected_logps = ref_logps[batch_size:]
-
-    logits = args.beta * ((chosen_logps - ref_chosen_logps) - (rejected_logps - ref_rejected_logps))
-    loss = (- torch.nn.functional.logsigmoid(logits) * (1 - args.label_smoothing) -
-            torch.nn.functional.logsigmoid(-logits) * args.label_smoothing).mean(0)
-
-    return loss
 
 def main():
     args = parse_args()
@@ -622,14 +502,40 @@ def main():
             args.global_rank)
         model.train()
         import time
-        
-        for step, train_batch in enumerate(train_dataloader):
+        for step, batch in enumerate(train_dataloader):
             start = time.time()
-            
-            train_batch = to_device(train_batch, device)
-            
-            loss = compute_loss(model, ref_model, tokenizer, train_batch, args)
-            
+            batch = to_device(batch, device)
+            batch_size = batch['input_ids'].shape[0] // 2
+            chosen_input_ids = batch['input_ids'][:batch_size]
+            rejected_input_ids = batch['input_ids'][batch_size:]
+            label_mask = (batch['input_ids'] != tokenizer.pad_token_id).int()
+            for i in range(batch_size):
+                divergence_ind = (chosen_input_ids[i] !=
+                                  rejected_input_ids[i]).nonzero().squeeze(-1)
+                if len(divergence_ind) > 0:
+                    divergence_ind = divergence_ind[0]
+                else:
+                    divergence_ind = 0
+                label_mask[i][:divergence_ind] = 0
+                label_mask[i + batch_size][:divergence_ind] = 0
+            outputs = model(**batch, use_cache=False)
+            with torch.no_grad():
+                ref_outputs = ref_model(**batch)
+
+            logps = get_batch_logps(outputs.logits, batch['input_ids'],
+                                    label_mask)
+            ref_logps = get_batch_logps(ref_outputs.logits, batch['input_ids'],
+                                        label_mask)
+
+            chosen_logps = logps[:batch_size]
+            rejected_logps = logps[batch_size:]
+            ref_chosen_logps = ref_logps[:batch_size]
+            ref_rejected_logps = ref_logps[batch_size:]
+
+            logits = args.beta * ((chosen_logps - ref_chosen_logps) -
+                                  (rejected_logps - ref_rejected_logps))
+            loss = (- torch.nn.functional.logsigmoid(logits) * (1 - args.label_smoothing) - \
+                    torch.nn.functional.logsigmoid(-logits) * args.label_smoothing).mean(0)
             if args.print_loss:
                 print(
                     f"Epoch: {epoch}, Step: {step}, Rank: {torch.distributed.get_rank()}, loss = {loss}"
