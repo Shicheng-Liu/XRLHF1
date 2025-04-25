@@ -69,6 +69,9 @@ class DahoasFULLHHRLHFDataset(PromptRawDataset):
 
     def get_prompt_and_rejected(self, sample):
         return sample['prompt'] + sample['rejected']
+    
+    def get_rewards(self, sample):
+        return sample['rewards']
 
 class ImdbRewardDataset(PromptRawDataset):
 
