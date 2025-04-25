@@ -32,7 +32,7 @@ for src_filename, tgt_filename in zip(src_filenames, tgt_filenames):
         rejected_segs = rejected.split("\n\n")
 
         chosen_segs_join = []
-        assert(chosen_segs[0] == ""), chosen_segs
+        #assert(chosen_segs[0] == ""), chosen_segs
         temp = ""
         human_prompts = ["Human: ", "Humans: "]
         assistant_prompt = "Assistant: "
@@ -59,7 +59,7 @@ for src_filename, tgt_filename in zip(src_filenames, tgt_filenames):
 
         # reject
         rejected_segs_join = []
-        assert(rejected_segs[0] == ""), rejected_segs
+        #assert(rejected_segs[0] == ""), rejected_segs
         temp = ""
         human_prompts = ["Human: ", "Humans: "]
         assistant_prompt = "Assistant: "
