@@ -567,6 +567,8 @@ def main():
         unlearn_iter = iter(unlearn_dataloader)
         for step, retain_batch in enumerate(retain_dataloader):
             start = time.time()
+            model.zero_grad()
+
             retain_batch = to_device(retain_batch, device)
 
             try:
