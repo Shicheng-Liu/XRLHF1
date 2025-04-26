@@ -421,14 +421,14 @@ def main():
     unlearn_dataset = get_prompt_dataset(
         args.local_rank, args.unlearn_data_path,
         args.unlearn_data_output_path,
-        unlearn_phase
+        unlearn_phase,
         args.seed,
         tokenizer,
         args.max_seq_len)
     retain_dataset = get_prompt_dataset(
         args.local_rank, args.retain_data_path,
         args.retain_data_output_path,
-        retain_phase
+        retain_phase,
         args.seed,
         tokenizer,
         args.max_seq_len)
