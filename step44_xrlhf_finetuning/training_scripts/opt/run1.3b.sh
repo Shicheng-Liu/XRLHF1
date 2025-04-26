@@ -16,7 +16,7 @@ OUTPUT=$1
 ZERO_STAGE=2
 UNLEARN_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/step44_xrlhf_finetuning/opt-1.3b_unlearn.json"
 RETAIN_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/step44_xrlhf_finetuning/opt-1.3b_retain.json"
-DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
+EVAL_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
 MODEL_NAME=~/workspace/siyuan/ReMax/step1_supervised_finetuning/output/opt-1.3b/full-hh-rlhf
 SEED=2023
 
