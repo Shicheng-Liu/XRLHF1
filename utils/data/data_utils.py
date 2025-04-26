@@ -192,9 +192,9 @@ class PromptDataset(Dataset):
             )
         elif self.train_phase == 4:
             return {
-                "input_ids": self.chosen_dataset[idx]["input_ids"],
-                "attention_mask": self.chosen_dataset[idx]["attention_mask"],
-                "labels": self.chosen_dataset[idx]["labels"],  # input_ids
+                "input_ids": self.reject_dataset[idx]["input_ids"],
+                "attention_mask": self.reject_dataset[idx]["attention_mask"],
+                "labels": self.reject_dataset[idx]["labels"],  # input_ids
             }
         elif self.train_phase == 5:
             return {

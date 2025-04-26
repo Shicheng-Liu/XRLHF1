@@ -262,7 +262,10 @@ def get_dataset(local_rank,
         chosen_sentence = raw_dataset.get_prompt_and_chosen(
             tmp_data
         )  # the accept response
-        if chosen_sentence is not None:
+        rejected_sentence = raw_dataset.get_prompt_and_rejected(
+            tmp_data
+        )  # the accept response
+        if chosen_sentence is not None and rejected_sentence is not None:
             prompt_token = tokenizer(
                 prompt,
                 max_length=max_seq_len,
@@ -273,6 +276,7 @@ def get_dataset(local_rank,
             prompt_length = len(prompt_token["input_ids"].flatten())
 
             chosen_sentence += end_of_conversation_token
+            rejected_sentence += end_of_conversation_token
             chosen_token = tokenizer(
                 chosen_sentence,
                 max_length=max_seq_len,
@@ -280,20 +284,31 @@ def get_dataset(local_rank,
                 truncation=True,
                 return_tensors="pt",
             )
+            rejected_token = tokenizer(
+                rejected_sentence,
+                max_length=max_seq_len,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
+            )
             chosen_token["input_ids"] = chosen_token["input_ids"].squeeze(0)
             chosen_token["attention_mask"] = chosen_token["attention_mask"].squeeze(0)
+            rejected_token["input_ids"] = rejected_token["input_ids"].squeeze(0)
+            rejected_token["attention_mask"] = rejected_token["attention_mask"].squeeze(0)
 
             # do not calculate loss for prompts labels
-            labels = deepcopy(chosen_token["input_ids"])
+            chosen_labels = deepcopy(chosen_token["input_ids"])
+            rejected_labels = deepcopy(rejected_token["input_ids"])
             if prompt_length == max_seq_len:
                 # skip inputs that are all of prompts
                 continue
             else:
-                labels[:prompt_length] = IGNORE_INDEX
+                chosen_labels[:prompt_length] = IGNORE_INDEX
+                rejected_labels[:prompt_length] = IGNORE_INDEX
 
             # our implementation: pad tokens are not used for loss
             assert tokenizer.pad_token == tokenizer.eos_token
-            padding_begin_ids = (
+            chosen_padding_begin_ids = (
                 (
                     chosen_token["input_ids"][prompt_length:]
                     == tokenizer.pad_token_id
@@ -301,12 +316,26 @@ def get_dataset(local_rank,
                 .nonzero()
                 .flatten()
             )
-            if len(padding_begin_ids) > 1:
+            rejected_padding_begin_ids = (
+                (
+                    rejected_token["input_ids"][prompt_length:]
+                    == tokenizer.pad_token_id
+                )
+                .nonzero()
+                .flatten()
+            )
+            if len(chosen_padding_begin_ids) > 1:
                 # we use padding_begin_ids[1] because of the right-side shifting in calculating loss
-                padding_begin_id = padding_begin_ids[1].item() + prompt_length
-                labels[padding_begin_id:] = IGNORE_INDEX
-            chosen_token["labels"] = labels
+                chosen_padding_begin_id = chosen_padding_begin_ids[1].item() + prompt_length
+                chosen_labels[chosen_padding_begin_id:] = IGNORE_INDEX
+            if len(rejected_padding_begin_ids) > 1:
+                # we use padding_begin_ids[1] because of the right-side shifting in calculating loss
+                rejected_padding_begin_id = rejected_padding_begin_ids[1].item() + prompt_length
+                rejected_labels[rejected_padding_begin_id:] = IGNORE_INDEX
+            chosen_token["labels"] = chosen_labels
             chosen_dataset.append(chosen_token)
+            rejected_token["labels"] = rejected_labels
+            reject_dataset.append(rejected_token)
             #print(f"Keys in chosen_token[{i}]:", chosen_token.keys())
     return PromptDataset(
         prompt_dataset,
@@ -584,9 +613,24 @@ def main():
             }
             merged_batch = to_device(merged_batch, device)
             outputs = model(**merged_batch, use_cache=False)
-            final_loss = outputs.loss  # You may need to compute custom loss if needed
-    
+            logits = outputs.logits  # (batch_size, seq_len, vocab_size)
+            labels = merged_batch['labels']  # (batch_size, seq_len)
 
+            # 4. Split
+            batch_size = retain_batch['input_ids'].size(0)
+            retain_logits = logits[:batch_size]
+            unlearn_logits = logits[batch_size:]
+            retain_labels = labels[:batch_size]
+            unlearn_labels = labels[batch_size:]
+
+            # 5. Compute losses manually
+            loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction='mean')  # or your loss config
+
+            # Reshape logits and labels if needed
+            retain_loss = loss_fct(retain_logits.view(-1, retain_logits.size(-1)), retain_labels.view(-1))
+            unlearn_loss = loss_fct(unlearn_logits.view(-1, unlearn_logits.size(-1)), unlearn_labels.view(-1))
+
+            final_loss = retain_loss - unlearn_loss
 
             # retain_outputs = model(**retain_batch, use_cache=False)
             # retain_loss = retain_outputs.loss
