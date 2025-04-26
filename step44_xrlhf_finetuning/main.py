@@ -613,24 +613,24 @@ def main():
             }
             merged_batch = to_device(merged_batch, device)
             outputs = model(**merged_batch, use_cache=False)
-            logits = outputs.logits  # (batch_size, seq_len, vocab_size)
-            labels = merged_batch['labels']  # (batch_size, seq_len)
+            # logits = outputs.logits  # (batch_size, seq_len, vocab_size)
+            # labels = merged_batch['labels']  # (batch_size, seq_len)
 
-            # 4. Split
-            batch_size = retain_batch['input_ids'].size(0)
-            retain_logits = logits[:batch_size]
-            unlearn_logits = logits[batch_size:]
-            retain_labels = labels[:batch_size]
-            unlearn_labels = labels[batch_size:]
+            # # 4. Split
+            # batch_size = retain_batch['input_ids'].size(0)
+            # retain_logits = logits[:batch_size]
+            # unlearn_logits = logits[batch_size:]
+            # retain_labels = labels[:batch_size]
+            # unlearn_labels = labels[batch_size:]
 
-            # 5. Compute losses manually
-            loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction='mean')  # or your loss config
+            # # 5. Compute losses manually
+            # loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction='mean')  # or your loss config
 
-            # Reshape logits and labels if needed
-            retain_loss = loss_fct(retain_logits.view(-1, retain_logits.size(-1)), retain_labels.view(-1))
-            unlearn_loss = loss_fct(unlearn_logits.view(-1, unlearn_logits.size(-1)), unlearn_labels.view(-1))
+            # # Reshape logits and labels if needed
+            # retain_loss = loss_fct(retain_logits.view(-1, retain_logits.size(-1)), retain_labels.view(-1))
+            # unlearn_loss = loss_fct(unlearn_logits.view(-1, unlearn_logits.size(-1)), unlearn_labels.view(-1))
 
-            final_loss = retain_loss - unlearn_loss
+            final_loss = outputs.loss
 
             # retain_outputs = model(**retain_batch, use_cache=False)
             # retain_loss = retain_outputs.loss
