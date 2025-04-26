@@ -196,6 +196,12 @@ class PromptDataset(Dataset):
                 "attention_mask": self.chosen_dataset[idx]["attention_mask"],
                 "labels": self.chosen_dataset[idx]["labels"],  # input_ids
             }
+        elif self.train_phase == 5:
+            return {
+                "input_ids": self.chosen_dataset[idx]["input_ids"],
+                "attention_mask": self.chosen_dataset[idx]["attention_mask"],
+                "labels": self.chosen_dataset[idx]["labels"],  # input_ids
+            }
 
 
 def create_dataset_split(

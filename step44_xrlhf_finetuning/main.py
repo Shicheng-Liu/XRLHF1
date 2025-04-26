@@ -233,6 +233,7 @@ def parse_args():
 def get_dataset(local_rank,
         dataset_name,
         output_path,
+        train_phase,
         seed,
         tokenizer,
         end_of_conversation_token,
@@ -279,13 +280,14 @@ def get_dataset(local_rank,
         chosen_dataset,
         reject_dataset,
         tokenizer.pad_token_id,
-        train_phase=4,
+        train_phase,
     )
 
     
 def get_prompt_dataset(local_rank,
     data_path,
     output_path,
+    phase,
     seed,
     tokenizer,
     max_seq_len,
@@ -309,6 +311,7 @@ def get_prompt_dataset(local_rank,
             local_rank,
             data_path[0],
             output_path,
+            phase,
             seed,
             tokenizer,
             end_of_conversation_token,
@@ -399,13 +402,15 @@ def main():
             model = make_model_gradient_checkpointing_compatible(model)
 
     # Prepare the data
-    train_phase = 1
+    eval_phase = 1
+    unlearn_phase = 4
+    retain_phase = 5
     _, eval_dataset = create_prompt_dataset(
         args.local_rank,
         args.data_path,
         args.data_split,
         args.data_output_path,
-        train_phase,
+        eval_phase,
         args.data_seed,
         tokenizer,
         args.max_seq_len,
@@ -416,12 +421,14 @@ def main():
     unlearn_dataset = get_prompt_dataset(
         args.local_rank, args.unlearn_data_path,
         args.unlearn_data_output_path,
+        unlearn_phase
         args.seed,
         tokenizer,
         args.max_seq_len)
     retain_dataset = get_prompt_dataset(
         args.local_rank, args.retain_data_path,
         args.retain_data_output_path,
+        retain_phase
         args.seed,
         tokenizer,
         args.max_seq_len)
