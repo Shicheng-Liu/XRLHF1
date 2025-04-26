@@ -577,12 +577,22 @@ def main():
                 unlearn_iter = iter(unlearn_dataloader)
                 unlearn_batch = next(unlearn_iter)
             unlearn_batch = to_device(unlearn_batch, device)
+            # Combine inputs BEFORE the forward pass
+            merged_batch = {
+                key: torch.cat([retain_batch[key], unlearn_batch[key]], dim=0)
+                for key in retain_batch
+            }
+            merged_batch = to_device(merged_batch, device)
+            outputs = model(**merged_batch, use_cache=False)
+            final_loss = outputs.loss  # You may need to compute custom loss if needed
+    
 
-            retain_outputs = model(**retain_batch, use_cache=False)
-            retain_loss = retain_outputs.loss
-            unlearn_outputs = model(**unlearn_batch, use_cache=False)
-            unlearn_loss = unlearn_outputs.loss
-            final_loss = retain_loss + unlearn_loss
+
+            # retain_outputs = model(**retain_batch, use_cache=False)
+            # retain_loss = retain_outputs.loss
+            # unlearn_outputs = model(**unlearn_batch, use_cache=False)
+            # unlearn_loss = unlearn_outputs.loss
+            # final_loss = retain_loss + unlearn_loss
             if args.print_loss:
                 print(
                     f"Epoch: {epoch + 1}, Step: {step}, Rank: {torch.distributed.get_rank()}, retain_loss = {final_loss}"
