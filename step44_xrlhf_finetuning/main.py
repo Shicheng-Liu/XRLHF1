@@ -9,6 +9,7 @@ import math
 import time
 import sys
 import json
+from copy import deepcopy
 import hashlib
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
@@ -50,6 +51,7 @@ from utils.model.model_utils import create_hf_model
 from utils.perf import print_throughput
 from utils.gpu_utils import print_machine_info
 
+IGNORE_INDEX = -100
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -256,16 +258,21 @@ def get_dataset(local_rank,
     chosen_dataset = []
     reject_dataset = []
     for i, tmp_data in enumerate(train_dataset):
-        # tokenize the text
+        prompt = raw_dataset.get_prompt(tmp_data)
         chosen_sentence = raw_dataset.get_prompt_and_chosen(
             tmp_data
         )  # the accept response
-        reject_sentence = raw_dataset.get_prompt_and_rejected(
-            tmp_data
-        )  # the accept response
-        if chosen_sentence is not None and reject_sentence is not None:
-            chosen_sentence += end_of_conversation_token  # the accept response
-            reject_sentence += end_of_conversation_token
+        if chosen_sentence is not None:
+            prompt_token = tokenizer(
+                prompt,
+                max_length=max_seq_len,
+                padding="do_not_pad",
+                truncation=True,
+                return_tensors="pt",
+            )
+            prompt_length = len(prompt_token["input_ids"].flatten())
+
+            chosen_sentence += end_of_conversation_token
             chosen_token = tokenizer(
                 chosen_sentence,
                 max_length=max_seq_len,
@@ -273,20 +280,33 @@ def get_dataset(local_rank,
                 truncation=True,
                 return_tensors="pt",
             )
-            reject_token = tokenizer(
-                reject_sentence,
-                max_length=max_seq_len,
-                padding="max_length",
-                truncation=True,
-                return_tensors="pt",
-            )
-            chosen_token["input_ids"] = chosen_token["input_ids"]
-            chosen_token["attention_mask"] = chosen_token["attention_mask"]
-            chosen_dataset.append(chosen_token)
+            chosen_token["input_ids"] = chosen_token["input_ids"].squeeze(0)
+            chosen_token["attention_mask"] = chosen_token["attention_mask"].squeeze(0)
 
-            reject_token["input_ids"] = reject_token["input_ids"]
-            reject_token["attention_mask"] = reject_token["attention_mask"]
-            reject_dataset.append(reject_token)
+            # do not calculate loss for prompts labels
+            labels = deepcopy(chosen_token["input_ids"])
+            if prompt_length == max_seq_len:
+                # skip inputs that are all of prompts
+                continue
+            else:
+                labels[:prompt_length] = IGNORE_INDEX
+
+            # our implementation: pad tokens are not used for loss
+            assert tokenizer.pad_token == tokenizer.eos_token
+            padding_begin_ids = (
+                (
+                    chosen_token["input_ids"][prompt_length:]
+                    == tokenizer.pad_token_id
+                )
+                .nonzero()
+                .flatten()
+            )
+            if len(padding_begin_ids) > 1:
+                # we use padding_begin_ids[1] because of the right-side shifting in calculating loss
+                padding_begin_id = padding_begin_ids[1].item() + prompt_length
+                labels[padding_begin_id:] = IGNORE_INDEX
+            chosen_token["labels"] = labels
+            chosen_dataset.append(chosen_token)
     return PromptDataset(
         prompt_dataset,
         chosen_dataset,
