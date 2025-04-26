@@ -37,6 +37,12 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
+        "--new_data_path",
+        type=str,
+        help="Path to test prompts",
+        required=True,
+    )
+    parser.add_argument(
         "--num_padding_at_beginning",
         type=int,
         default=1,
@@ -184,35 +190,50 @@ def main():
     # Finetuned models have less such issue. Thus following prompts all end with ":"
     # to make it a more meaningful comparison.
     ds = load_dataset("json", data_files=args.data_path)["train"]
+    new_ds = load_dataset("json", data_files=args.new_data_path)["train"]
     prompts = ds["prompt"]  
-    response_base = ds["response_base"]
+    
     response_sft = ds["response_sft"]
     response_rlhf = ds["response_rlhf"]
+    response_xrlhf = new_ds["response_xrlhf"]
 
     
     
-    reward_base_list = []
+    
     reward_finetune_list = []
     reward_rlhf_list = []
-    win_rate_list = []
-    sign = 1
-    for prompt, base_response, sft_response, rlhf_response in tqdm(zip(prompts, response_base, response_sft, response_rlhf),total=len(prompts),desc="Evaluation process"):
+    reward_xrlhf_list = []
+    win_rate_list_rlhf_sft = []
+    win_rate_list_xrlhf_sft = []
+    win_rate_list_xrlhf_rlhf = []
+    
+    for prompt, sft_response, rlhf_response, xrlhf_response in tqdm(zip(prompts, response_sft, response_rlhf, response_xrlhf),total=len(prompts),desc="Evaluation process"):
         
         # print('base_response',base_response)
         # print('sft_response',sft_response)
         # print('rlhf_response',rlhf_response)
 
-        base_reward = get_reward(prompt,base_response,reward_model,reward_tokenizer,device,args.end_of_conversation_token,args.num_padding_at_beginning,args.model_name_or_path_reward)
+        
         finetune_reward = get_reward(prompt,sft_response,reward_model,reward_tokenizer,device,args.end_of_conversation_token,args.num_padding_at_beginning,args.model_name_or_path_reward)
         rlhf_reward = get_reward(prompt,rlhf_response,reward_model,reward_tokenizer,device,args.end_of_conversation_token,args.num_padding_at_beginning,args.model_name_or_path_reward)
+        xrlhf_reward = get_reward(prompt,xrlhf_response,reward_model,reward_tokenizer,device,args.end_of_conversation_token,args.num_padding_at_beginning,args.model_name_or_path_reward)
 
-        reward_base_list.append(base_reward)
+        
         reward_finetune_list.append(finetune_reward)
         reward_rlhf_list.append(rlhf_reward)
+        reward_xrlhf_list.append(xrlhf_reward)
         if rlhf_reward >= finetune_reward:
-            win_rate_list.append(1)
+            win_rate_list_rlhf_sft.append(1)
         else:
-            win_rate_list.append(0)
+            win_rate_list_rlhf_sft.append(0)
+        if xrlhf_reward >= finetune_reward:
+            win_rate_list_xrlhf_sft.append(1)
+        else:
+            win_rate_list_xrlhf_sft.append(0)
+        if xrlhf_reward >= rlhf_reward:
+            win_rate_list_xrlhf_rlhf.append(1)
+        else:
+            win_rate_list_xrlhf_rlhf.append(0)
         # elif rlhf_reward < finetune_reward:
         #     win_rate_list.append(0)
         # elif rlhf_reward == finetune_reward and sign == 1:
@@ -224,10 +245,13 @@ def main():
 
         
 
-    print("reward for base model",np.mean(reward_base_list))
+    
     print("reward for SFT model",np.mean(reward_finetune_list))
     print("reward for rlhf model",np.mean(reward_rlhf_list))
-    print("win rate",1.0*sum(win_rate_list)/len(win_rate_list))
+    print("reward for xrlhf model",np.mean(reward_xrlhf_list))
+    print("RLHF_SFT win rate",1.0*sum(win_rate_list_rlhf_sft)/len(win_rate_list_rlhf_sft))
+    print("XRLHF_SFT win rate",1.0*sum(win_rate_list_xrlhf_sft)/len(win_rate_list_xrlhf_sft))
+    print("XRLHF_RLHF win rate",1.0*sum(win_rate_list_xrlhf_rlhf)/len(win_rate_list_xrlhf_rlhf))
 
 
 if __name__ == "__main__":
