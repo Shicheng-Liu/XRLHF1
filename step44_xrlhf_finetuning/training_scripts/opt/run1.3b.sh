@@ -14,6 +14,8 @@ DEV=1,2
 PORT=1235
 OUTPUT=$1
 ZERO_STAGE=2
+UNLEARN_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/step44_xrlhf_finetuning/opt-1.3b_unlearn.json"
+RETAIN_DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/step44_xrlhf_finetuning/opt-1.3b_retain.json"
 DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
 MODEL_NAME=~/workspace/siyuan/ReMax/step1_supervised_finetuning/output/opt-1.3b/full-hh-rlhf
 SEED=2023
@@ -26,7 +28,9 @@ mkdir -p $OUTPUT
 
 (deepspeed --include localhost:$DEV --master_port $PORT \
 main.py \
-   --data_path $DATA_PATH \
+   --eval_data_path $EVAL_DATA_PATH \
+   --unlearn_data_path $UNLEARN_DATA_PATH\
+   --retain_data_path $RETAIN_DATA_PATH\
    --data_output_path "/tmp/data_files/opt" \
    --data_split 2,4,4 \
    --model_name_or_path $MODEL_NAME \

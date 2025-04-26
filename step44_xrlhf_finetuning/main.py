@@ -9,7 +9,7 @@ import math
 import time
 import sys
 import json
-
+import hashlib
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
@@ -27,7 +27,7 @@ from deepspeed.ops.adam import DeepSpeedCPUAdam, FusedAdam
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 )
-from utils.data.data_utils import create_prompt_dataset
+from utils.data.data_utils import create_prompt_dataset, PromptDataset, get_raw_dataset
 from utils.utils import (
     print_rank_0,
     to_device,
@@ -55,14 +55,21 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Finetune a transformers model on a causal language modeling task"
     )
-    parser.add_argument(
-        "--data_path",
-        nargs="*",
-        default=["Dahoas/rm-static"],
-        help="Path to the training dataset. Accepted format:"
-        "1) a single data path, 2) multiple datasets in the"
-        "form: dataset1-path dataset2-path ...",
-    )
+    parser.add_argument('--unlearn_data_path',
+                        nargs="*",
+                        help='Path to the unlearn set',
+                        required=True,
+                        )
+    parser.add_argument('--retain_data_path',
+                        nargs="*",
+                        help='Path to the retain set',
+                        required=True,
+                        )
+    parser.add_argument('--eval_data_path',
+                        nargs="*",
+                        help='Path to the eval set',
+                        required=True,
+                        )
     parser.add_argument(
         "--data_split",
         type=str,
@@ -223,6 +230,93 @@ def parse_args():
 
     return args
 
+def get_dataset(local_rank,
+        dataset_name,
+        output_path,
+        seed,
+        tokenizer,
+        end_of_conversation_token,
+        max_seq_len):
+    raw_dataset = get_raw_dataset(dataset_name, output_path, seed, local_rank)
+    train_dataset = raw_dataset.get_train_data()
+    prompt_dataset = []
+    chosen_dataset = []
+    reject_dataset = []
+    for i, tmp_data in enumerate(train_dataset):
+        # tokenize the text
+        chosen_sentence = raw_dataset.get_prompt_and_chosen(
+            tmp_data
+        )  # the accept response
+        reject_sentence = raw_dataset.get_prompt_and_rejected(
+            tmp_data
+        )  # the accept response
+        if chosen_sentence is not None and reject_sentence is not None:
+            chosen_sentence += end_of_conversation_token  # the accept response
+            reject_sentence += end_of_conversation_token
+            chosen_token = tokenizer(
+                chosen_sentence,
+                max_length=max_seq_len,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
+            )
+            reject_token = tokenizer(
+                reject_sentence,
+                max_length=max_seq_len,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
+            )
+            chosen_token["input_ids"] = chosen_token["input_ids"]
+            chosen_token["attention_mask"] = chosen_token["attention_mask"]
+            chosen_dataset.append(chosen_token)
+
+            reject_token["input_ids"] = reject_token["input_ids"]
+            reject_token["attention_mask"] = reject_token["attention_mask"]
+            reject_dataset.append(reject_token)
+    return PromptDataset(
+        prompt_dataset,
+        chosen_dataset,
+        reject_dataset,
+        tokenizer.pad_token_id,
+        train_phase=4,
+    )
+
+    
+def get_prompt_dataset(local_rank,
+    data_path,
+    output_path,
+    seed,
+    tokenizer,
+    max_seq_len,
+    end_of_conversation_token="<|endoftext|>",
+    reload=False):
+    os.makedirs(output_path, exist_ok=True)
+    fname = "_".join(data_path)
+    tokenizer_name = tokenizer.init_kwargs["name_or_path"].replace("/", "_")
+    fname = f"{fname}_phase4_seed{seed}_tokenizer{tokenizer_name}_seqlen{max_seq_len}"
+    fname = "_".join(fname.split("/"))
+    fname = hashlib.sha256(
+        fname.encode()
+    ).hexdigest()  # hash the file name to avoid too long file name
+    train_fname = f"{output_path}/traindata_{fname}.pt"
+
+    cache_found = os.path.isfile(train_fname) 
+    buf_create_cache = torch.ByteTensor([not cache_found]).cuda()
+    torch.distributed.all_reduce(buf_create_cache)
+    if local_rank <= 0 and (buf_create_cache.item() != 0 or reload):
+        train_dataset = get_dataset(
+            local_rank,
+            data_path[0],
+            output_path,
+            seed,
+            tokenizer,
+            end_of_conversation_token,
+            max_seq_len,
+        )
+        torch.save(train_dataset, train_fname)
+    torch.distributed.barrier()
+    return torch.load(train_fname,weights_only=False)
 
 def save_model(
     model,
@@ -306,7 +400,7 @@ def main():
 
     # Prepare the data
     train_phase = 1
-    train_dataset, eval_dataset = create_prompt_dataset(
+    _, eval_dataset = create_prompt_dataset(
         args.local_rank,
         args.data_path,
         args.data_split,
@@ -319,25 +413,41 @@ def main():
         sft_only_data_path=args.sft_only_data_path,
         reload=True,
     )
+    unlearn_dataset = get_prompt_dataset(
+        args.local_rank, args.unlearn_data_path,
+        args.unlearn_data_output_path,
+        args.seed,
+        tokenizer,
+        args.max_seq_len)
+    retain_dataset = get_prompt_dataset(
+        args.local_rank, args.retain_data_path,
+        args.retain_data_output_path,
+        args.seed,
+        tokenizer,
+        args.max_seq_len)
     # DataLoaders creation:
     if args.local_rank == -1:
-        train_sampler = RandomSampler(train_dataset)
+        #train_sampler = RandomSampler(train_dataset)
+        unlearn_sampler = RandomSampler(unlearn_dataset)
+        retain_sampler = RandomSampler(retain_dataset)
         eval_sampler = SequentialSampler(eval_dataset)
     else:
-        train_sampler = DistributedSampler(train_dataset)
+        #train_sampler = DistributedSampler(train_dataset)
+        unlearn_sampler = DistributedSampler(unlearn_dataset)
+        retain_sampler = DistributedSampler(retain_dataset)
         eval_sampler = DistributedSampler(eval_dataset)
-    train_dataloader = DataLoader(
-        train_dataset,
-        collate_fn=default_data_collator,
-        sampler=train_sampler,
-        batch_size=args.per_device_train_batch_size,
-    )
-    eval_dataloader = DataLoader(
-        eval_dataset,
-        collate_fn=default_data_collator,
-        sampler=eval_sampler,
-        batch_size=args.per_device_eval_batch_size,
-    )
+    unlearn_dataloader = DataLoader(unlearn_dataset,
+                                 collate_fn=default_data_collator,
+                                 sampler=unlearn_sampler,
+                                 batch_size=args.per_device_train_batch_size)
+    retain_dataloader = DataLoader(retain_dataset,
+                                 collate_fn=default_data_collator,
+                                 sampler=retain_sampler,
+                                 batch_size=args.per_device_train_batch_size)
+    eval_dataloader = DataLoader(eval_dataset,
+                                 collate_fn=default_data_collator,
+                                 sampler=eval_sampler,
+                                 batch_size=args.per_device_eval_batch_size)
 
     def evaluation(model, eval_dataloader):
         model.eval()
@@ -374,7 +484,7 @@ def main():
     )
 
     num_update_steps_per_epoch = math.ceil(
-        len(train_dataloader) / args.gradient_accumulation_steps
+        len(retain_dataloader) / args.gradient_accumulation_steps
     )
     lr_scheduler = get_scheduler(
         name=args.lr_scheduler_type,
@@ -410,27 +520,38 @@ def main():
 
     for epoch in range(args.num_train_epochs):
         print_rank_0(
-            f"Beginning of Epoch {epoch + 1}/{args.num_train_epochs}, Total Micro Batches {len(train_dataloader)}",
+            f"Beginning of Epoch {epoch + 1}/{args.num_train_epochs}, Total Micro Batches {len(retain_dataloader)}",
             args.global_rank,
         )
         model.train()
-        for step, batch in enumerate(train_dataloader):
+        unlearn_iter = iter(unlearn_dataloader)
+        for step, retain_batch in enumerate(retain_dataloader):
             start = time.time()
-            batch = to_device(batch, device)
+            retain_batch = to_device(retain_batch, device)
 
-            outputs = model(**batch, use_cache=False)
-            loss = outputs.loss
+            try:
+                unlearn_batch = next(unlearn_iter)
+            except StopIteration:
+                unlearn_iter = iter(unlearn_dataloader)
+                unlearn_batch = next(unlearn_iter)
+            unlearn_batch = to_device(unlearn_batch, device)
+
+            retain_outputs = model(**retain_batch, use_cache=False)
+            retain_loss = retain_outputs.loss
+            unlearn_outputs = model(**unlearn_batch, use_cache=False)
+            unlearn_loss = unlearn_outputs.loss
+            final_loss = retain_loss + unlearn_loss
             if args.print_loss:
                 print(
-                    f"Epoch: {epoch + 1}, Step: {step}, Rank: {torch.distributed.get_rank()}, loss = {loss}"
+                    f"Epoch: {epoch + 1}, Step: {step}, Rank: {torch.distributed.get_rank()}, retain_loss = {final_loss}"
                 )
-            model.backward(loss)
+            model.backward(final_loss)
             model.step()
             end = time.time()
             if torch.distributed.get_rank() == 0:
                 print_throughput(model.module, args, end - start, args.global_rank)
 
-            if (step + 1) % int(len(train_dataloader) // 10) == 0:
+            if (step + 1) % int(len(retain_dataloader) // 10) == 0:
                 # Evaluate perplexity on the validation set.
                 print_rank_0(
                     f"***** Evaluating perplexity, Epoch {epoch + 1}/{args.num_train_epochs} Step: {step} *****",
