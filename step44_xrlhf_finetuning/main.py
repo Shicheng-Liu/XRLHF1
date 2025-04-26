@@ -407,7 +407,7 @@ def main():
     retain_phase = 5
     _, eval_dataset = create_prompt_dataset(
         args.local_rank,
-        args.data_path,
+        args.eval_data_path,
         args.data_split,
         args.data_output_path,
         eval_phase,
