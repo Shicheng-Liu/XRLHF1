@@ -27,7 +27,7 @@ mkdir -p $OUTPUT
 (deepspeed --include localhost:$DEV --master_port $PORT \
 main.py \
    --data_path $DATA_PATH \
-   --data_output_path "/tmp/data_files/opt" \
+   --data_output_path "/tmp/data_files/pythia" \
    --data_split 2,4,4 \
    --model_name_or_path $MODEL_NAME \
    --per_device_train_batch_size 16 \
