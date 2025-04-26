@@ -307,7 +307,7 @@ def get_dataset(local_rank,
                 labels[padding_begin_id:] = IGNORE_INDEX
             chosen_token["labels"] = labels
             chosen_dataset.append(chosen_token)
-            print(f"Keys in chosen_token[{i}]:", chosen_token.keys())
+            #print(f"Keys in chosen_token[{i}]:", chosen_token.keys())
     return PromptDataset(
         prompt_dataset,
         chosen_dataset,
@@ -325,7 +325,7 @@ def get_prompt_dataset(local_rank,
     tokenizer,
     max_seq_len,
     end_of_conversation_token="<|endoftext|>",
-    reload=False):
+    reload=True):
     os.makedirs(output_path, exist_ok=True)
     fname = "_".join(data_path)
     tokenizer_name = tokenizer.init_kwargs["name_or_path"].replace("/", "_")
