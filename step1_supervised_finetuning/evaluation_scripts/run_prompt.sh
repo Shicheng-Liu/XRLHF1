@@ -7,5 +7,5 @@
 # You can provide two models to compare the performance of the baseline and the finetuned model
 
 CUDA_VISIBLE_DEVICES=0 python prompt_eval.py \
-    --model_name_or_path_baseline facebook/opt-1.3b \
-    --model_name_or_path_finetune output/opt-1.3b/full-hh-rlhf
+    --model_name_or_path_baseline EleutherAI/pythia-2.8b \
+    --model_name_or_path_finetune output/pythia-2.8b/full-hh-rlhf
