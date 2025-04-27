@@ -8,11 +8,11 @@ export NUMEXPR_NUM_THREADS=4
 export OPENBLAS_NUM_THREADS=4
 export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
-
+#~/workspace/siyuan/ReMax/step1_supervised_finetuning/output/pythia-2.8b/full-hh-rlhf
 DEV=1,2
 PORT=1236
 DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
-ACTOR_MODEL_PATH=~/workspace/siyuan/ReMax/step1_supervised_finetuning/output/pythia-2.8b/full-hh-rlhf
+ACTOR_MODEL_PATH=EleutherAI/pythia-2.8b
 REWARD_MODEL_PATH=~/workspace/siyuan/ReMax/step2_reward_model_finetuning/output/pythia-2.8b/full-hh-rlhf
 ACTOR_ZERO_STAGE=2
 REWARD_ZERO_STAGE=3
@@ -61,9 +61,10 @@ main.py \
    --actor_zero_stage $ACTOR_ZERO_STAGE \
    --reward_zero_stage $REWARD_ZERO_STAGE \
    --reference_zero_stage $REFERENCE_ZERO_STAGE \
-   --enable_hybrid_engine \
    --output_dir $OUTPUT \
    --enable_tensorboard \
    --print_answers \
    --save_answers \
    --deepspeed --output_dir $OUTPUT) 2>&1 | tee $OUTPUT/training.log
+
+   #--enable_hybrid_engine \
