@@ -832,7 +832,7 @@ def main():
                     global_step,
                     print_answers=args.print_answers and global_step % 20 == 0,
                 )
-                print("out",out)
+                # print("out",out)
 
                 if batch_unsupervised is not None:
                     batch_unsupervised = to_device(batch_unsupervised, device)

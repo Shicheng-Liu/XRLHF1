@@ -148,7 +148,7 @@ class DeepSpeedReMaxTrainer:
             print_answers,
             synced_gpus=self.z3_enabled,
         )
-        seq = torch.clamp(seq, min=0, max=self.tokenizer.vocab_size - 1)
+        #seq = torch.clamp(seq, min=0, max=self.tokenizer.vocab_size - 1)
 
 
         if training_mode:
@@ -220,12 +220,12 @@ class DeepSpeedReMaxTrainer:
         logits = torch.clamp(logits, min=-50, max=50)
         logits_ref = torch.clamp(logits_ref, min=-50, max=50)
 
-        def is_bad(tensor):
-            return torch.isnan(tensor).any() or torch.isinf(tensor).any()
+        # def is_bad(tensor):
+        #     return torch.isnan(tensor).any() or torch.isinf(tensor).any()
 
-        if is_bad(logits) or is_bad(reward_score):
-            print_rank_0("Detected NaN or Inf after generation, skipping batch.", 0)
-            return None
+        # if is_bad(logits) or is_bad(reward_score):
+        #     print_rank_0("Detected NaN or Inf after generation, skipping batch.", 0)
+        #     return None
 
         log_softmax_values = F.log_softmax(logits, dim=-1)
         softmax_probs = torch.exp(log_softmax_values)
