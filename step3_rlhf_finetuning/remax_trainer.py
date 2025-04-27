@@ -148,20 +148,7 @@ class DeepSpeedReMaxTrainer:
             print_answers,
             synced_gpus=self.z3_enabled,
         )
-        print_rank_0(f"✅ Checking seq before clamping...", 0)
-
-        vocab_size = self.tokenizer.vocab_size
-
-        has_negative = (seq < 0).any()
-        has_overflow = (seq >= vocab_size).any()
-
-        print_rank_0(f"❗Has negative token IDs? {has_negative}", 0)
-        print_rank_0(f"❗Has token IDs >= vocab_size ({vocab_size})? {has_overflow}", 0)
-
-        if has_negative or has_overflow:
-            print_rank_0(f"Some bad tokens detected!", 0)
-            bad_tokens = seq[(seq < 0) | (seq >= vocab_size)]
-            print_rank_0(f"Examples of bad tokens: {bad_tokens[:20]}", 0)
+        seq = torch.clamp(seq, min=0, max=self.tokenizer.vocab_size - 1)
 
 
         if training_mode:
@@ -175,6 +162,7 @@ class DeepSpeedReMaxTrainer:
                 do_sample=False,
                 tag="greedy",
             )
+        baseline_seq = torch.clamp(baseline_seq, min=0, max=self.tokenizer.vocab_size - 1)
         generate_end = time.time()
         self.train()
 
