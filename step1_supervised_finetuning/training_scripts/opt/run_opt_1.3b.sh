@@ -10,11 +10,11 @@ export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
 
 
-DEV=0
+DEV=1
 PORT=1235
 OUTPUT=$1
 ZERO_STAGE=2
-DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
+DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/tldr"
 MODEL_NAME="facebook/opt-1.3b"
 SEED=2023
 
