@@ -191,14 +191,17 @@ class DeepSpeedReMaxTrainer:
                         baseline_action_mask[i, eos_token_pos] = 1
 
         with torch.no_grad():
-            print("seq",seq)
+            #print("seq",seq)
             output = self.actor_model(seq, attention_mask=action_mask)
-            print('output',output)
+            #print('output',output)
             output_ref = self.ref_model(seq, attention_mask=action_mask)
-            print('output_ref',output_ref)
+            print('action_mask',action_mask)
             reward_score = self.reward_model.forward_value(
                 seq, action_mask, prompt_length=self.prompt_length
             )["chosen_end_scores"].detach()
+            print("original reward", self.reward_model.forward_value(
+                seq, action_mask, prompt_length=self.prompt_length
+            ))
             print('reward_score',reward_score)
             if training_mode:
                 baseline_reward_score = self.reward_model.forward_value(
