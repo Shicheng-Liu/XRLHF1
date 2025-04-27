@@ -154,16 +154,16 @@ class RewardModel(nn.Module):
             use_cache=use_cache,
             **kwargs
         )
-        print("iinput_ids",input_ids)
-        print("past_key_values",past_key_values)
-        print("transformer oututs",transformer_outputs)
-        print("attention_mask",attention_mask)
-        print("inputs_embeds",inputs_embeds)
-        print("use_cache",use_cache)
+        # print("iinput_ids",input_ids)
+        # print("past_key_values",past_key_values)
+        # print("transformer oututs",transformer_outputs)
+        # print("attention_mask",attention_mask)
+        # print("inputs_embeds",inputs_embeds)
+        # print("use_cache",use_cache)
         hidden_states = transformer_outputs[0]
-        print("hidden_states",hidden_states)
+        # print("hidden_states",hidden_states)
         values = self.v_head(hidden_states).squeeze(-1)
-        print("values",values)
+        # print("values",values)
         if return_value_only:
             return values
         else:

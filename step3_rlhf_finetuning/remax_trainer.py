@@ -190,6 +190,11 @@ class DeepSpeedReMaxTrainer:
                         eos_token_pos = self.prompt_length + ans_mask[0].item()
                         baseline_action_mask[i, eos_token_pos] = 1
 
+        valid_answer_lengths = (action_mask[:, self.prompt_length:]).sum(dim=1)
+        if (valid_answer_lengths < 2).any():  # if any sample has answer too short
+            print_rank_0(f"⚠️ Detected invalid (empty/short) generation, skipping batch at step {step}.", 0)
+            return None
+
         with torch.no_grad():
             #print("seq",seq)
             output = self.actor_model(seq, attention_mask=action_mask)
@@ -199,9 +204,9 @@ class DeepSpeedReMaxTrainer:
             reward_score = self.reward_model.forward_value(
                 seq, action_mask, prompt_length=self.prompt_length
             )["chosen_end_scores"].detach()
-            print("original reward", self.reward_model.forward_value(
-                seq, action_mask, prompt_length=self.prompt_length
-            ))
+            #print("original reward", self.reward_model.forward_value(
+            #    seq, action_mask, prompt_length=self.prompt_length
+            #))
             #print('reward_score',reward_score)
             if training_mode:
                 baseline_reward_score = self.reward_model.forward_value(
