@@ -162,7 +162,7 @@ class DeepSpeedReMaxTrainer:
                 do_sample=False,
                 tag="greedy",
             )
-        baseline_seq = torch.clamp(baseline_seq, min=0, max=self.tokenizer.vocab_size - 1)
+        #baseline_seq = torch.clamp(baseline_seq, min=0, max=self.tokenizer.vocab_size - 1)
         generate_end = time.time()
         self.train()
 
