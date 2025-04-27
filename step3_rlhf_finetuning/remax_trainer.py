@@ -148,6 +148,22 @@ class DeepSpeedReMaxTrainer:
             print_answers,
             synced_gpus=self.z3_enabled,
         )
+        print_rank_0(f"✅ Checking seq before clamping...", 0)
+
+        vocab_size = self.tokenizer.vocab_size
+
+        has_negative = (seq < 0).any()
+        has_overflow = (seq >= vocab_size).any()
+
+        print_rank_0(f"❗Has negative token IDs? {has_negative}", 0)
+        print_rank_0(f"❗Has token IDs >= vocab_size ({vocab_size})? {has_overflow}", 0)
+
+        if has_negative or has_overflow:
+            print_rank_0(f"Some bad tokens detected!", 0)
+            bad_tokens = seq[(seq < 0) | (seq >= vocab_size)]
+            print_rank_0(f"Examples of bad tokens: {bad_tokens[:20]}", 0)
+
+
         if training_mode:
             baseline_seq = self._generate_sequence(
                 self.actor_model,
@@ -190,10 +206,6 @@ class DeepSpeedReMaxTrainer:
                         eos_token_pos = self.prompt_length + ans_mask[0].item()
                         baseline_action_mask[i, eos_token_pos] = 1
 
-        valid_answer_lengths = (action_mask[:, self.prompt_length:]).sum(dim=1)
-        if (valid_answer_lengths < 2).any():  # if any sample has answer too short
-            print_rank_0(f"⚠️ Detected invalid (empty/short) generation, skipping batch at step {step}.", 0)
-            return None
 
         with torch.no_grad():
             #print("seq",seq)
