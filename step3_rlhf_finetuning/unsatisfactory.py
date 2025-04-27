@@ -31,6 +31,12 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
+        "--data_name",
+        type=str,
+        help="data name",
+        required=True,
+    )
+    parser.add_argument(
         "--model_name_or_path_reward",
         type=str,
         help="Path to reward model",
@@ -241,7 +247,7 @@ def main():
             "satisfactory_response": r
         })
 
-    with open(f"{args.model_name}_satisfactory.json","w") as f:
+    with open(f"{args.model_name}_{args.data_name}_satisfactory.json","w") as f:
         json.dump(satisfactory_results,f,indent=3)
 
     # for p, s, r in zip(satisfactory_prompts,satisfactory_sft,satisfactory_responses):
@@ -261,7 +267,7 @@ def main():
             "unsatisfactory_response": r
         })
     
-    with open(f"{args.model_name}_unsatisfactory.json","w") as f:
+    with open(f"{args.model_name}_{args.data_name}_unsatisfactory.json","w") as f:
         json.dump(unsatisfactory_results,f,indent=3)
 
     # for p, s, r in zip(unsatisfactory_prompts,unsatisfactory_sft,unsatisfactory_responses):

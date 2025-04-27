@@ -50,6 +50,12 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
+        "--data_name",
+        type=str,
+        help="data name",
+        required=True,
+    )
+    parser.add_argument(
         "--data_path",
         type=str,
         help="Path to test prompts",
@@ -225,7 +231,7 @@ def prompt_eval(args, model_baseline, model_fintuned, model_rlhf, tokenizer, dev
             "response_sft": s,
             "response_rlhf": r
         })
-    with open(f"{args.model_name}_test_result.json","w") as f:
+    with open(f"{args.model_name}_{args.data_name}_test_result.json","w") as f:
         json.dump(test_results,f,indent=4)
         # Note: we use the above simplest greedy search as the baseline. Users can also use other baseline methods,
         # such as beam search, multinomial sampling, and beam-search multinomial sampling.

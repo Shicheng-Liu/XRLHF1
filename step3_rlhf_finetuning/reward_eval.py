@@ -37,6 +37,12 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
+        "--data_name",
+        type=str,
+        help="data name",
+        required=True,
+    )
+    parser.add_argument(
         "--num_padding_at_beginning",
         type=int,
         default=1,

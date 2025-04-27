@@ -9,11 +9,11 @@ export OPENBLAS_NUM_THREADS=4
 export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
 
-DEV=1,2
+DEV=1
 PORT=1236
-DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
-ACTOR_MODEL_PATH=~/workspace/siyuan/ReMax/step1_supervised_finetuning/output/opt-1.3b/full-hh-rlhf
-REWARD_MODEL_PATH=~/workspace/siyuan/ReMax/step2_reward_model_finetuning/output/opt-1.3b/full-hh-rlhf
+DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/tldr"
+ACTOR_MODEL_PATH=~/workspace/siyuan/ReMax/step1_supervised_finetuning/output/opt-1.3b/tldr
+REWARD_MODEL_PATH=~/workspace/siyuan/ReMax/step2_reward_model_finetuning/output/opt-1.3b/tldr
 ACTOR_ZERO_STAGE=2
 REWARD_ZERO_STAGE=3
 REFERENCE_ZERO_STAGE=3
@@ -21,7 +21,7 @@ OUTPUT=$1
 SEED=2023
 
 if [ "$OUTPUT" == "" ]; then
-    OUTPUT=./output/opt-1.3b/full-hh-rlhf
+    OUTPUT=./output/opt-1.3b/tldr
 fi
 
 mkdir -p $OUTPUT
