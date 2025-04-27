@@ -19,7 +19,7 @@ MODEL_NAME="facebook/opt-1.3b"
 SEED=2023
 
 if [ "$OUTPUT" == "" ]; then
-    OUTPUT=./output/opt-1.3b/full-hh-rlhf
+    OUTPUT=./output/opt-1.3b/tldr
 fi
 mkdir -p $OUTPUT
 

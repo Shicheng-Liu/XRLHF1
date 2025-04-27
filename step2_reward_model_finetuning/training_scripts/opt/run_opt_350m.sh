@@ -9,16 +9,16 @@ export OPENBLAS_NUM_THREADS=4
 export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
 
-DEV=1,2
+DEV=2
 PORT=1236
 OUTPUT=$1
 ZERO_STAGE=2
-DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
+DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/tldr"
 MODEL_NAME="facebook/opt-350m"
 SEED=1234
 
 if [ "$OUTPUT" == "" ]; then
-    OUTPUT=./output/opt-1.3b/full-hh-rlhf
+    OUTPUT=./output/opt-1.3b/tldr
 fi
 mkdir -p $OUTPUT
 
