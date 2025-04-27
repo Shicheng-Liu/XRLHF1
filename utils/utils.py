@@ -68,12 +68,15 @@ def get_tokenizer(model_name_or_path, fast_tokenizer=True):
 
 
 def load_hf_tokenizer(model_name_or_path, fast_tokenizer=True,add_special_tokens=None):
-    if os.path.exists(model_name_or_path) and "pythia" not in model_name_or_path:
+    if os.path.exists(model_name_or_path):
         # Locally tokenizer loading has some issue, so we need to force download
         model_json = os.path.join(model_name_or_path, "config.json")
         if os.path.exists(model_json):
             model_json_file = json.load(open(model_json))
-            model_name = model_json_file["_name_or_path"]
+            if "pythia-2.8b" in model_name_or_path:
+                model_name = "EleutherAI/pythia-2.8b"
+            else:
+                model_name = model_json_file["_name_or_path"]
             tokenizer = get_tokenizer(model_name, fast_tokenizer=fast_tokenizer)
     else:
         tokenizer = get_tokenizer(model_name_or_path, fast_tokenizer=fast_tokenizer)
