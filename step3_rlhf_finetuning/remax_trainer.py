@@ -202,7 +202,7 @@ class DeepSpeedReMaxTrainer:
             print("original reward", self.reward_model.forward_value(
                 seq, action_mask, prompt_length=self.prompt_length
             ))
-            print('reward_score',reward_score)
+            #print('reward_score',reward_score)
             if training_mode:
                 baseline_reward_score = self.reward_model.forward_value(
                     baseline_seq, baseline_action_mask, prompt_length=self.prompt_length
