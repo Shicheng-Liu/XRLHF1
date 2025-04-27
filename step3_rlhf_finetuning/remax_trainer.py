@@ -195,7 +195,7 @@ class DeepSpeedReMaxTrainer:
             output = self.actor_model(seq, attention_mask=action_mask)
             #print('output',output)
             output_ref = self.ref_model(seq, attention_mask=action_mask)
-            print('action_mask',action_mask)
+            #print('action_mask',action_mask)
             reward_score = self.reward_model.forward_value(
                 seq, action_mask, prompt_length=self.prompt_length
             )["chosen_end_scores"].detach()
