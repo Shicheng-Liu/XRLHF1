@@ -128,11 +128,11 @@ class DahoasFullhhrlhfDataset(PromptRawDataset):
         return sample["prompt"] + sample["rejected"]
     
 # English dataset
-class TDLRDataset(PromptRawDataset):
+class TLDRDataset(PromptRawDataset):
     def __init__(self, output_path, seed, local_rank, dataset_name):
         super().__init__(output_path, seed, local_rank, dataset_name)
-        self.dataset_name = "tdlr"
-        self.dataset_name_clean = "tdlr"
+        self.dataset_name = "tldr"
+        self.dataset_name_clean = "tldr"
 
     def get_train_data(self):
         return self.raw_datasets["train"]
