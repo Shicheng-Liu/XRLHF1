@@ -95,7 +95,7 @@ class DeepSpeedReMaxTrainer:
         )
 
         with torch.no_grad():
-            print(f"Model vocab size: {model.config.vocab_size}")
+            print(f"Model vocab size: {self.actor_model.module.config.vocab_size}")
             print(f"Tokenizer vocab size: {len(self.tokenizer)}")
             seq = model.module.generate(
                 prompts,
