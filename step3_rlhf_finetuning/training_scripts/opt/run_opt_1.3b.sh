@@ -61,9 +61,11 @@ main.py \
    --actor_zero_stage $ACTOR_ZERO_STAGE \
    --reward_zero_stage $REWARD_ZERO_STAGE \
    --reference_zero_stage $REFERENCE_ZERO_STAGE \
-   --enable_hybrid_engine \
    --output_dir $OUTPUT \
    --enable_tensorboard \
    --print_answers \
    --save_answers \
    --deepspeed --output_dir $OUTPUT) 2>&1 | tee $OUTPUT/training.log
+
+
+#--enable_hybrid_engine \
