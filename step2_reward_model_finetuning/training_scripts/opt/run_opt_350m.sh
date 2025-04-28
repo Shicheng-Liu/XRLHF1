@@ -13,12 +13,12 @@ DEV=1
 PORT=2742
 OUTPUT=$1
 ZERO_STAGE=2
-DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/tldr"
+DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/Dahoas/full-hh-rlhf"
 MODEL_NAME="facebook/opt-350m"
 SEED=1234
 
 if [ "$OUTPUT" == "" ]; then
-    OUTPUT=./output/opt-1.3b/tldr
+    OUTPUT=./output/opt-1.3b/Dahoas/full-hh-rlhf
 fi
 mkdir -p $OUTPUT
 
