@@ -63,6 +63,7 @@ main.py \
    --reference_zero_stage $REFERENCE_ZERO_STAGE \
    --output_dir $OUTPUT \
    --enable_tensorboard \
+   --enable_hybrid_engine \
    --print_answers \
    --save_answers \
    --deepspeed --output_dir $OUTPUT) 2>&1 | tee $OUTPUT/training.log
