@@ -10,7 +10,7 @@ export RAYON_NUM_THREADS=20
 export TOKENIZERS_PARALLELISM=False
 
 DEV=1
-PORT=1236
+PORT=2742
 OUTPUT=$1
 ZERO_STAGE=2
 DATA_PATH="/gpuhome/hbz5148/workspace/siyuan/ReMax/dataset/tldr"
