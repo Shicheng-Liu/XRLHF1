@@ -97,7 +97,10 @@ class DeepSpeedReMaxTrainer:
             temperature=1.0,
         )
 
+        
+
         with torch.no_grad():
+            print(f"[DEBUG] Before generation: prompts min {prompts.min().item()}, max {prompts.max().item()}")
             # print(f"Model vocab size: {self.actor_model.module.config.vocab_size}")
             # print(f"Tokenizer vocab size: {len(self.tokenizer)}")
             seq = model.module.generate(
@@ -108,6 +111,8 @@ class DeepSpeedReMaxTrainer:
                 synced_gpus=synced_gpus,
                 **kwargs,
             )
+            print(f"[DEBUG] After generation: seq shape {seq.shape}")
+            print(f"[DEBUG] seq min {seq.min().item()}, max {seq.max().item()}, mean {seq.float().mean().item()}")
 
         # Filter out seq with no answers (or very short). This happens when users directly use the pre-training ckpt
         # without supervised fine tuning
