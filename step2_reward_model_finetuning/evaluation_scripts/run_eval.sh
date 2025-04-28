@@ -6,4 +6,4 @@
 
 # Add the path to the finetuned model
 python  rw_eval.py \
-    --model_name_or_path output/opt-1.3b/tldr
+    --model_name_or_path output/opt-1.3b/Dahoas/full-hh-rlhf
