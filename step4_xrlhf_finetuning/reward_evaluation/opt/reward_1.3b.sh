@@ -2,7 +2,7 @@
 
 # trained by opt-1.3b reward model
 
-MODEL_NAME="OpenAssistant/reward-model/deberta-v3-large-v2"
+MODEL_NAME="OpenAssistant/reward-model-deberta-v3-large-v2"
 #MODEL_NAME=~/workspace/siyuan/ReMax/step2_reward_model_finetuning/output/opt-1.3b/full-hh-rlhf
 
 CUDA_VISIBLE_DEVICES=0 python reward_eval.py \
