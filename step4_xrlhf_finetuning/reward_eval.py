@@ -164,7 +164,7 @@ def get_reward(prompt,response,reward_model,reward_tokenizer,device,end_of_conve
     if "PKU" in reward_name:
         reward = PKU_reward(prompt,response,reward_model,reward_tokenizer,device)
     if "OpenAssistant" in reward_name:
-        reward = OpenAssistant_reward
+        reward = OpenAssistant_reward(prompt,response,reward_model,reward_tokenizer,device)
     return reward
 
 
