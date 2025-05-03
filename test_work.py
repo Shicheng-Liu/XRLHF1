@@ -40,7 +40,7 @@ def gpt4_compare(prompt, api_key, max_retries=3):
     for _ in range(max_retries):
         try:
             # response = openai.ChatCompletion.create(
-            response = openai.ChatCompletions.create(
+            response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
                 messages=[{
                     "role": "user",
